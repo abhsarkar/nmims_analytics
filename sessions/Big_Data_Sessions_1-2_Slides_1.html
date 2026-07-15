@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Data Analytics — Sessions 1 &amp; 2 (Slides)</title>
+<style>
+  :root{
+    --navy:#07111F; --navy2:#0E1C30; --panel:#12233B;
+    --cyan:#2E8BC0; --cyan-lt:#AEE3F5; --gold:#C08A2E; --gold-lt:#E4B75A;
+    --red:#E0534B; --green:#3FBF8F; --ink:#EAF2FA; --soft:#93A8C0; --line:#22364f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#04080f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  /* deck viewport */
+  .deck{position:fixed;inset:0;overflow:hidden}
+  .slide{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    padding:4vh 6vw 5vh;
+    background:radial-gradient(1100px 620px at 74% -12%, #14263e 0%, var(--navy) 58%);
+    color:var(--ink);
+  }
+  .slide.active{display:flex;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* top strip */
+  .strip{position:absolute;top:0;left:0;right:0;height:8px;background:var(--navy);border-bottom:2px solid var(--cyan)}
+  .eyebrow{color:var(--cyan-lt);font-size:1.5vw;font-weight:800;letter-spacing:.18vw;text-transform:uppercase;margin-bottom:1.1vh}
+  .eyebrow .sec{color:var(--gold-lt)}
+  h1{font-size:4.6vw;line-height:1.04;font-weight:850;letter-spacing:-.5px}
+  h1.big{font-size:6.6vw}
+  h2{font-size:3.5vw;line-height:1.06;font-weight:800;margin-bottom:.6vh}
+  h2 .accent,h1 .accent{color:var(--gold-lt)}
+  .lede{color:var(--soft);font-size:1.85vw;line-height:1.32;margin-top:1.2vh;max-width:56ch;font-weight:500}
+  .rule{width:7vw;height:5px;background:var(--gold);border-radius:3px;margin:2.4vh 0}
+
+  ul.pts{list-style:none;margin-top:2.2vh}
+  ul.pts li{
+    font-size:2.05vw;line-height:1.28;margin-bottom:1.5vh;padding-left:2vw;position:relative;
+    color:#dbe7f4;max-width:56ch
+  }
+  ul.pts li::before{content:"";position:absolute;left:2px;top:.9vw;width:.9vw;height:.9vw;border-radius:3px;
+    background:var(--cyan);transform:rotate(45deg)}
+  ul.pts li b{color:#fff;font-weight:750}
+  ul.pts.small li{font-size:1.9vw;margin-bottom:1.2vh}
+
+  .lead-hl{color:var(--gold-lt);font-weight:800}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;background:#0a1626;border:1px solid var(--line);
+    border-radius:6px;padding:2px 8px;font-size:.9em;color:var(--cyan-lt)}
+
+  /* takeaway / discuss / board */
+  .box{margin-top:auto;border-radius:16px;padding:2vh 1.8vw;font-size:1.85vw;line-height:1.34;font-weight:700}
+  .box .lab{display:block;font-size:1.35vw;letter-spacing:.15vw;text-transform:uppercase;margin-bottom:1vh;font-weight:800}
+  .box.take{background:rgba(46,139,192,.14);border-left:5px solid var(--cyan)}
+  .box.take .lab{color:var(--cyan-lt)}
+  .box.take{color:#eaf4fb}
+  .box.board{background:var(--navy2);border-left:5px solid var(--gold);color:#eef4fa}
+  .box.board .lab{color:var(--gold-lt)}
+  .box.discuss{background:rgba(192,138,46,.13);border-left:5px solid var(--gold);color:#f4e7d3}
+  .box.discuss .lab{color:var(--gold-lt)}
+  .box .subtxt{display:block;font-size:1.5vw;font-weight:500;color:var(--soft);margin-top:1.2vh}
+
+  /* two-column */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:3.5vw;margin-top:3vh;flex:1}
+  .col h3{font-size:1.7vw;color:var(--gold-lt);text-transform:uppercase;letter-spacing:.12vw;margin-bottom:2vh;font-weight:800}
+  .col ul{list-style:none}
+  .col li{font-size:1.95vw;line-height:1.28;margin-bottom:1.6vh;padding-left:1.6vw;position:relative;color:#d5e3f2}
+  .col li::before{content:"›";position:absolute;left:2px;color:var(--cyan);font-weight:800}
+
+  /* data table */
+  table{width:100%;border-collapse:collapse;margin-top:2vh;font-size:1.75vw}
+  th{background:var(--navy2);color:var(--cyan-lt);text-align:left;padding:1.1vh 1.1vw;font-weight:800;font-size:1.45vw;
+    text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--cyan)}
+  td{padding:1.1vh 1.1vw;border-bottom:1px solid var(--line);color:#d8e5f3;vertical-align:top}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  td b{color:#fff}
+  .peak td{background:rgba(192,138,46,.14)!important}
+  .peak td:first-child{color:var(--gold-lt);font-weight:800}
+
+  /* generation timeline chips */
+  .gens{display:flex;gap:0;margin-top:30px;align-items:stretch}
+  .gen{flex:1;background:var(--panel);border:1px solid var(--line);padding:2.6vh 1.8vw;position:relative}
+  .gen:first-child{border-radius:12px 0 0 12px}
+  .gen:last-child{border-radius:0 12px 12px 0}
+  .gen .gt{font-size:1.5vw;color:var(--gold-lt);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+  .gen .gd{font-size:1.9vw;color:#dbe7f4;line-height:1.3}
+  .gen .yr{font-size:1.3vw;color:var(--soft);margin-top:10px}
+  .gen.brk{border-color:var(--red)}
+  .gen.brk .gt{color:var(--red)}
+  .arrow{display:flex;align-items:center;color:var(--soft);font-size:26px;padding:0 6px}
+
+  /* section divider slide */
+  .divider{justify-content:center;align-items:flex-start;
+    background:linear-gradient(120deg,#0a1a2e 0%,var(--navy) 60%)}
+  .divider .eyebrow{font-size:1.7vw}
+  .divider h1{font-size:7vw}
+  .divider .part{color:var(--soft);font-size:2.6vw;margin-top:2.4vh;font-weight:500;max-width:44ch}
+
+  /* cover */
+  .cover{justify-content:center;background:linear-gradient(150deg,#0b1d33 0%,#04080f 70%)}
+  .cover .brand{font-size:1.6vw;letter-spacing:.2vw;color:var(--cyan-lt);font-weight:800;text-transform:uppercase;margin-bottom:20px}
+  .cover h1{font-size:7.4vw;line-height:.98}
+  .cover .cs{font-size:3vw;color:var(--cyan);margin-top:10px;font-weight:600}
+  .cover .meta{margin-top:5vh;color:var(--soft);font-size:2vw;line-height:1.7}
+  .cover .meta b{color:#dbe7f4;font-weight:700}
+
+  /* footer / chrome */
+  .foot{position:absolute;bottom:2.8vh;left:6vw;right:6vw;display:flex;justify-content:space-between;
+    align-items:center;color:var(--soft);font-size:13px;letter-spacing:.4px}
+  .foot{font-size:1.25vw}
+  .foot .brandf{font-weight:700;color:#7d94ad}
+  .pnum{font-weight:800;color:var(--gold-lt)}
+
+
+  .figure{margin-top:24px;display:flex;justify-content:center;align-items:center}
+  .figure svg{width:100%;max-width:52vw;height:auto}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:3vw;align-items:center;flex:1}
+  .split .fig-side{display:flex;align-items:center;justify-content:center}
+  .split .fig-side svg{width:100%;max-width:40vw;height:auto}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
+
+
+  .figure.fig-compact svg{max-width:46vw}
+  .split{margin-top:20px}
+  .split .fig-side svg{max-width:40vw}
+  /* when a slide has cols AND a diagram, shrink cols spacing */
+
+
+  .figure svg{max-height:46vh}
+  .figure.fig-compact svg{max-height:40vh}
+  .split .fig-side svg{max-height:52vh}
+  /* slide-5 style: make the storage-stack figure sit beside the lede, not below */
+
+  /* progress bar */
+  .pbar{position:absolute;bottom:0;left:0;height:4px;background:var(--gold);transition:width .3s}
+
+  /* nav hint + controls */
+  .ctrl{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20;opacity:.28;transition:.2s}
+  .ctrl:hover{opacity:1}
+  .ctrl button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;
+    padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
+  .ctrl button:hover{border-color:var(--cyan)}
+
+  .hintbar{position:fixed;top:16px;right:20px;color:#4d647d;font-size:12px;z-index:20}
+  @media print{.ctrl,.hintbar{display:none}}
+</style>
+</head>
+<body>
+<div class="strip"></div>
+<div class="deck" id="deck"></div>
+
+<div class="hintbar">← → navigate · F fullscreen · O overview</div>
+<div class="ctrl">
+  <button onclick="go(-1)">← Prev</button>
+  <button onclick="toggleFull()">⤢ Full</button>
+  <button onclick="go(1)">Next →</button>
+</div>
+
+<script>
+/* ---- custom diagrams ---- */
+const SVGS = {"bigdata": "<svg viewBox=\"0 0 520 320\" xmlns=\"http://www.w3.org/2000/svg\">\n<defs><linearGradient id=\"g1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n<stop offset=\"0\" stop-color=\"#2E8BC0\"/><stop offset=\"1\" stop-color=\"#E4B75A\"/></linearGradient></defs>\n<!-- three stacked capability bars, each with a crack -->\n<g font-family=\"Helvetica\" font-weight=\"700\">\n<rect x=\"30\" y=\"30\" width=\"460\" height=\"66\" rx=\"12\" fill=\"#12233B\" stroke=\"#22364f\"/>\n<text x=\"52\" y=\"60\" fill=\"#AEE3F5\" font-size=\"17\">STORE</text>\n<text x=\"52\" y=\"82\" fill=\"#8FA9C2\" font-size=\"13\" font-weight=\"400\">one machine is full</text>\n<text x=\"360\" y=\"72\" fill=\"#E4B75A\" font-size=\"18\">HDFS</text>\n<path d=\"M300 30 l-10 30 l14 6 l-10 30\" stroke=\"#E0534B\" stroke-width=\"3\" fill=\"none\"/>\n<rect x=\"30\" y=\"122\" width=\"460\" height=\"66\" rx=\"12\" fill=\"#12233B\" stroke=\"#22364f\"/>\n<text x=\"52\" y=\"152\" fill=\"#AEE3F5\" font-size=\"17\">MOVE</text>\n<text x=\"52\" y=\"174\" fill=\"#8FA9C2\" font-size=\"13\" font-weight=\"400\">data always hours old</text>\n<text x=\"352\" y=\"164\" fill=\"#E4B75A\" font-size=\"18\">KAFKA</text>\n<path d=\"M300 122 l-10 30 l14 6 l-10 30\" stroke=\"#E0534B\" stroke-width=\"3\" fill=\"none\"/>\n<rect x=\"30\" y=\"214\" width=\"460\" height=\"66\" rx=\"12\" fill=\"#12233B\" stroke=\"#22364f\"/>\n<text x=\"52\" y=\"244\" fill=\"#AEE3F5\" font-size=\"17\">PROCESS</text>\n<text x=\"52\" y=\"266\" fill=\"#8FA9C2\" font-size=\"13\" font-weight=\"400\">100k queries at once</text>\n<text x=\"360\" y=\"256\" fill=\"#E4B75A\" font-size=\"18\">SPARK</text>\n<path d=\"M300 214 l-10 30 l14 6 l-10 30\" stroke=\"#E0534B\" stroke-width=\"3\" fill=\"none\"/>\n</g></svg>", "datasystem": "<svg viewBox=\"0 0 520 300\" xmlns=\"http://www.w3.org/2000/svg\">\n<g font-family=\"Helvetica\">\n<!-- user -->\n<circle cx=\"70\" cy=\"150\" r=\"30\" fill=\"#12233B\" stroke=\"#2E8BC0\" stroke-width=\"2\"/>\n<circle cx=\"70\" cy=\"140\" r=\"10\" fill=\"#AEE3F5\"/><path d=\"M52 168 a18 14 0 0 1 36 0\" fill=\"#AEE3F5\"/>\n<text x=\"70\" y=\"215\" fill=\"#8FA9C2\" font-size=\"13\" text-anchor=\"middle\">you</text>\n<!-- ask what arrow -->\n<path d=\"M108 132 H210\" stroke=\"#2E8BC0\" stroke-width=\"2.5\" marker-end=\"url(#a)\"/>\n<text x=\"158\" y=\"122\" fill=\"#AEE3F5\" font-size=\"13\" text-anchor=\"middle\" font-weight=\"700\">ask \"what\"</text>\n<!-- system box -->\n<rect x=\"215\" y=\"95\" width=\"150\" height=\"110\" rx=\"16\" fill=\"#0E1C30\" stroke=\"#E4B75A\" stroke-width=\"2\"/>\n<text x=\"290\" y=\"140\" fill=\"#fff\" font-size=\"19\" text-anchor=\"middle\" font-weight=\"800\">data</text>\n<text x=\"290\" y=\"164\" fill=\"#fff\" font-size=\"19\" text-anchor=\"middle\" font-weight=\"800\">system</text>\n<text x=\"290\" y=\"192\" fill=\"#8FA9C2\" font-size=\"11\" text-anchor=\"middle\">decides \"how\"</text>\n<!-- return arrow -->\n<path d=\"M210 176 H108\" stroke=\"#E4B75A\" stroke-width=\"2.5\" marker-end=\"url(#a)\"/>\n<text x=\"158\" y=\"196\" fill=\"#E4B75A\" font-size=\"13\" text-anchor=\"middle\" font-weight=\"700\">answer</text>\n<!-- storage cylinders -->\n<g fill=\"#12233B\" stroke=\"#22364f\" stroke-width=\"1.5\">\n<ellipse cx=\"425\" cy=\"120\" rx=\"26\" ry=\"9\"/><rect x=\"399\" y=\"120\" width=\"52\" height=\"34\" fill=\"#12233B\" stroke=\"none\"/>\n<path d=\"M399 120 v34 M451 120 v34\" stroke=\"#22364f\"/><ellipse cx=\"425\" cy=\"154\" rx=\"26\" ry=\"9\"/>\n<ellipse cx=\"425\" cy=\"175\" rx=\"26\" ry=\"9\"/><rect x=\"399\" y=\"175\" width=\"52\" height=\"24\" fill=\"#12233B\" stroke=\"none\"/>\n<path d=\"M399 175 v24 M451 175 v24\" stroke=\"#22364f\"/><ellipse cx=\"425\" cy=\"199\" rx=\"26\" ry=\"9\"/></g>\n<path d=\"M367 150 H396\" stroke=\"#2E8BC0\" stroke-width=\"2\" marker-end=\"url(#a)\"/>\n<text x=\"425\" y=\"230\" fill=\"#8FA9C2\" font-size=\"11\" text-anchor=\"middle\">storage</text>\n<defs><marker id=\"a\" markerWidth=\"9\" markerHeight=\"9\" refX=\"7\" refY=\"4.5\" orient=\"auto\">\n<path d=\"M0 0 L9 4.5 L0 9 z\" fill=\"#8FA9C2\"/></marker></defs>\n</g></svg>", "hwgap": "<svg viewBox=\"0 0 520 300\" xmlns=\"http://www.w3.org/2000/svg\">\n<g font-family=\"Helvetica\">\n<line x1=\"60\" y1=\"250\" x2=\"480\" y2=\"250\" stroke=\"#22364f\" stroke-width=\"1.5\"/>\n<line x1=\"60\" y1=\"250\" x2=\"60\" y2=\"40\" stroke=\"#22364f\" stroke-width=\"1.5\"/>\n<text x=\"270\" y=\"285\" fill=\"#8FA9C2\" font-size=\"13\" text-anchor=\"middle\">time \u2192</text>\n<text x=\"30\" y=\"150\" fill=\"#8FA9C2\" font-size=\"13\" text-anchor=\"middle\" transform=\"rotate(-90 30 150)\">speed \u2192</text>\n<!-- compute: steep -->\n<path d=\"M60 250 Q 250 235 470 60\" stroke=\"#E4B75A\" stroke-width=\"3.5\" fill=\"none\"/>\n<text x=\"415\" y=\"72\" fill=\"#E4B75A\" font-size=\"15\" font-weight=\"700\">compute</text>\n<!-- data movement: flat -->\n<path d=\"M60 250 Q 250 232 470 200\" stroke=\"#2E8BC0\" stroke-width=\"3.5\" fill=\"none\"/>\n<text x=\"392\" y=\"192\" fill=\"#AEE3F5\" font-size=\"15\" font-weight=\"700\">data movement</text>\n<!-- gap bracket -->\n<line x1=\"470\" y1=\"60\" x2=\"470\" y2=\"200\" stroke=\"#E0534B\" stroke-width=\"2\" stroke-dasharray=\"4 4\"/>\n<text x=\"486\" y=\"135\" fill=\"#E0534B\" font-size=\"13\" font-weight=\"700\" transform=\"rotate(90 486 135)\">the gap</text>\n</g></svg>", "gens": "<svg viewBox=\"0 0 900 150\" xmlns=\"http://www.w3.org/2000/svg\">\n<g font-family=\"Helvetica\">\n<line x1=\"40\" y1=\"80\" x2=\"860\" y2=\"80\" stroke=\"#22364f\" stroke-width=\"2\"/>\n<!-- gen1 -->\n<circle cx=\"150\" cy=\"80\" r=\"10\" fill=\"#2E8BC0\"/><text x=\"150\" y=\"50\" fill=\"#E4B75A\" font-size=\"16\" font-weight=\"800\" text-anchor=\"middle\">Gen 1</text>\n<text x=\"150\" y=\"112\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">pre-2014 \u00b7 GB</text>\n<text x=\"150\" y=\"128\" fill=\"#93A8C0\" font-size=\"11\" text-anchor=\"middle\">MySQL + Vertica</text>\n<!-- gen2 -->\n<circle cx=\"450\" cy=\"80\" r=\"10\" fill=\"#2E8BC0\"/><text x=\"450\" y=\"50\" fill=\"#E4B75A\" font-size=\"16\" font-weight=\"800\" text-anchor=\"middle\">Gen 2</text>\n<text x=\"450\" y=\"112\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">2014\u201317 \u00b7 PB \u00b7 24 hr</text>\n<text x=\"450\" y=\"128\" fill=\"#93A8C0\" font-size=\"11\" text-anchor=\"middle\">Hadoop + HDFS + Parquet</text>\n<!-- gen3 -->\n<circle cx=\"770\" cy=\"80\" r=\"12\" fill=\"#E4B75A\"/><text x=\"770\" y=\"50\" fill=\"#E4B75A\" font-size=\"16\" font-weight=\"800\" text-anchor=\"middle\">Gen 3</text>\n<text x=\"770\" y=\"112\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">2017+ \u00b7 100+ PB \u00b7 30 min</text>\n<text x=\"770\" y=\"128\" fill=\"#93A8C0\" font-size=\"11\" text-anchor=\"middle\">+ Kafka + Hudi</text>\n<!-- latency shrink arrows -->\n<path d=\"M180 80 H420\" stroke=\"#2E8BC0\" stroke-width=\"1.5\" marker-end=\"url(#ar)\"/>\n<path d=\"M480 80 H740\" stroke=\"#E4B75A\" stroke-width=\"1.5\" marker-end=\"url(#ar)\"/>\n<defs><marker id=\"ar\" markerWidth=\"9\" markerHeight=\"9\" refX=\"7\" refY=\"4.5\" orient=\"auto\"><path d=\"M0 0 L9 4.5 L0 9z\" fill=\"#8FA9C2\"/></marker></defs>\n</g></svg>", "hdfs": "<svg viewBox=\"0 0 520 300\" xmlns=\"http://www.w3.org/2000/svg\">\n<g font-family=\"Helvetica\">\n<!-- file splits into blocks -->\n<rect x=\"30\" y=\"30\" width=\"120\" height=\"40\" rx=\"6\" fill=\"#0E1C30\" stroke=\"#2E8BC0\"/>\n<text x=\"90\" y=\"55\" fill=\"#AEE3F5\" font-size=\"13\" text-anchor=\"middle\" font-weight=\"700\">big file</text>\n<g fill=\"#2E8BC0\"><rect x=\"30\" y=\"90\" width=\"34\" height=\"26\" rx=\"4\"/><rect x=\"73\" y=\"90\" width=\"34\" height=\"26\" rx=\"4\"/><rect x=\"116\" y=\"90\" width=\"34\" height=\"26\" rx=\"4\"/></g>\n<text x=\"90\" y=\"132\" fill=\"#8FA9C2\" font-size=\"11\" text-anchor=\"middle\">128 MB blocks</text>\n<path d=\"M90 72 V88\" stroke=\"#22364f\" stroke-width=\"1.5\" marker-end=\"url(#h)\"/>\n<!-- three datanodes each with replicas -->\n<g font-weight=\"700\">\n<rect x=\"210\" y=\"40\" width=\"90\" height=\"70\" rx=\"8\" fill=\"#12233B\" stroke=\"#22364f\"/><text x=\"255\" y=\"30\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">DataNode 1</text>\n<rect x=\"330\" y=\"40\" width=\"90\" height=\"70\" rx=\"8\" fill=\"#12233B\" stroke=\"#22364f\"/><text x=\"375\" y=\"30\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">DataNode 2</text>\n<rect x=\"330\" y=\"160\" width=\"90\" height=\"70\" rx=\"8\" fill=\"#12233B\" stroke=\"#22364f\"/><text x=\"375\" y=\"150\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">DataNode 3</text>\n<rect x=\"210\" y=\"160\" width=\"90\" height=\"70\" rx=\"8\" fill=\"#12233B\" stroke=\"#22364f\"/><text x=\"255\" y=\"150\" fill=\"#8FA9C2\" font-size=\"12\" text-anchor=\"middle\">DataNode 4</text>\n</g>\n<!-- one block replicated 3x (highlight) -->\n<rect x=\"225\" y=\"60\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#E4B75A\"/>\n<rect x=\"345\" y=\"60\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#E4B75A\"/>\n<rect x=\"345\" y=\"180\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#E4B75A\"/>\n<!-- other blocks -->\n<rect x=\"262\" y=\"60\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#2E8BC0\"/>\n<rect x=\"383\" y=\"60\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#2E8BC0\"/>\n<rect x=\"225\" y=\"180\" width=\"26\" height=\"20\" rx=\"3\" fill=\"#2E8BC0\"/>\n<text x=\"315\" y=\"255\" fill=\"#E4B75A\" font-size=\"12\" text-anchor=\"middle\" font-weight=\"700\">gold block: replicated 3\u00d7 across nodes</text>\n<defs><marker id=\"h\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"4\" orient=\"auto\"><path d=\"M0 0 L8 4 L0 8z\" fill=\"#8FA9C2\"/></marker></defs>\n</g></svg>", "batch": "<svg viewBox=\"0 0 520 260\" xmlns=\"http://www.w3.org/2000/svg\">\n<g font-family=\"Helvetica\">\n<text x=\"130\" y=\"30\" fill=\"#E4B75A\" font-size=\"15\" font-weight=\"800\" text-anchor=\"middle\">BATCH</text>\n<!-- batch: accumulate then one big block -->\n<g fill=\"#2E8BC0\"><circle cx=\"60\" cy=\"80\" r=\"7\"/><circle cx=\"85\" cy=\"80\" r=\"7\"/><circle cx=\"110\" cy=\"80\" r=\"7\"/><circle cx=\"135\" cy=\"80\" r=\"7\"/><circle cx=\"160\" cy=\"80\" r=\"7\"/></g>\n<rect x=\"55\" y=\"120\" width=\"120\" height=\"34\" rx=\"6\" fill=\"#12233B\" stroke=\"#2E8BC0\"/>\n<text x=\"115\" y=\"142\" fill=\"#AEE3F5\" font-size=\"12\" text-anchor=\"middle\">process all at once</text>\n<text x=\"115\" y=\"180\" fill=\"#8FA9C2\" font-size=\"11\" text-anchor=\"middle\">cheap \u00b7 delayed</text>\n<line x1=\"255\" y1=\"20\" x2=\"255\" y2=\"200\" stroke=\"#22364f\" stroke-width=\"1.5\"/>\n<text x=\"390\" y=\"30\" fill=\"#E4B75A\" font-size=\"15\" font-weight=\"800\" text-anchor=\"middle\">STREAMING</text>\n<!-- streaming: each dot flows straight through -->\n<g fill=\"#E4B75A\"><circle cx=\"300\" cy=\"80\" r=\"7\"/><circle cx=\"340\" cy=\"80\" r=\"7\"/><circle cx=\"380\" cy=\"80\" r=\"7\"/><circle cx=\"420\" cy=\"80\" r=\"7\"/><circle cx=\"460\" cy=\"80\" r=\"7\"/></g>\n<path d=\"M300 100 V150 M340 100 V150 M380 100 V150 M420 100 V150 M460 100 V150\" stroke=\"#E4B75A\" stroke-width=\"1.5\" marker-end=\"url(#s)\"/>\n<text x=\"380\" y=\"180\" fill=\"#8FA9C2\" font-size=\"11\" text-anchor=\"middle\">act while alive \u00b7 immediate</text>\n<defs><marker id=\"s\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"6\" orient=\"auto\"><path d=\"M0 0 L8 4 L0 8z\" fill=\"#E4B75A\"/></marker></defs>\n</g></svg>", "chain": "<svg viewBox=\"0 0 560 520\" xmlns=\"http://www.w3.org/2000/svg\"><g font-family=\"Helvetica\"><rect x=\"30\" y=\"20\" width=\"500\" height=\"78\" rx=\"12\" fill=\"#0d2033\" stroke=\"2E8BC0\" stroke-width=\"2.5\"/><circle cx=\"66\" cy=\"59\" r=\"17\" fill=\"2E8BC0\"/><text x=\"66\" y=\"66\" font-size=\"19\" fill=\"#07111F\" text-anchor=\"middle\" font-weight=\"800\">1</text><text x=\"98\" y=\"55\" font-size=\"20\" fill=\"#EAF2FA\" font-weight=\"700\">HDFS can\u2019t update a row in place</text><text x=\"98\" y=\"80\" font-size=\"14\" fill=\"#8FA9C2\">the technical constraint</text><line x1=\"280\" y1=\"100\" x2=\"280\" y2=\"118\" stroke=\"#8FA9C2\" stroke-width=\"2.5\" marker-end=\"url(#dn)\"/><rect x=\"30\" y=\"118\" width=\"500\" height=\"78\" rx=\"12\" fill=\"#0f2230\" stroke=\"4E86A8\" stroke-width=\"2.5\"/><circle cx=\"66\" cy=\"157\" r=\"17\" fill=\"4E86A8\"/><text x=\"66\" y=\"164\" font-size=\"19\" fill=\"#07111F\" text-anchor=\"middle\" font-weight=\"800\">2</text><text x=\"98\" y=\"153\" font-size=\"20\" fill=\"#EAF2FA\" font-weight=\"700\">So you rebuild whole tables</text><text x=\"98\" y=\"178\" font-size=\"14\" fill=\"#8FA9C2\">snapshot ingestion</text><line x1=\"280\" y1=\"198\" x2=\"280\" y2=\"216\" stroke=\"#8FA9C2\" stroke-width=\"2.5\" marker-end=\"url(#dn)\"/><rect x=\"30\" y=\"216\" width=\"500\" height=\"78\" rx=\"12\" fill=\"#1a1c22\" stroke=\"8A7F5E\" stroke-width=\"2.5\"/><circle cx=\"66\" cy=\"255\" r=\"17\" fill=\"8A7F5E\"/><text x=\"66\" y=\"262\" font-size=\"19\" fill=\"#07111F\" text-anchor=\"middle\" font-weight=\"800\">3</text><text x=\"98\" y=\"251\" font-size=\"20\" fill=\"#EAF2FA\" font-weight=\"700\">Costly \u2014 run it once a day</text><text x=\"98\" y=\"276\" font-size=\"14\" fill=\"#8FA9C2\">batch, not real time</text><line x1=\"280\" y1=\"296\" x2=\"280\" y2=\"314\" stroke=\"#8FA9C2\" stroke-width=\"2.5\" marker-end=\"url(#dn)\"/><rect x=\"30\" y=\"314\" width=\"500\" height=\"78\" rx=\"12\" fill=\"#241c10\" stroke=\"C08A2E\" stroke-width=\"2.5\"/><circle cx=\"66\" cy=\"353\" r=\"17\" fill=\"C08A2E\"/><text x=\"66\" y=\"360\" font-size=\"19\" fill=\"#07111F\" text-anchor=\"middle\" font-weight=\"800\">4</text><text x=\"98\" y=\"349\" font-size=\"20\" fill=\"#EAF2FA\" font-weight=\"700\">Data is always 24 hours old</text><text x=\"98\" y=\"374\" font-size=\"14\" fill=\"#8FA9C2\">yesterday\u2019s view</text><line x1=\"280\" y1=\"394\" x2=\"280\" y2=\"412\" stroke=\"#8FA9C2\" stroke-width=\"2.5\" marker-end=\"url(#dn)\"/><rect x=\"30\" y=\"412\" width=\"500\" height=\"78\" rx=\"12\" fill=\"#2a1414\" stroke=\"E0534B\" stroke-width=\"2.5\"/><circle cx=\"66\" cy=\"451\" r=\"17\" fill=\"E0534B\"/><text x=\"66\" y=\"458\" font-size=\"19\" fill=\"#07111F\" text-anchor=\"middle\" font-weight=\"800\">5</text><text x=\"98\" y=\"447\" font-size=\"20\" fill=\"#EAF2FA\" font-weight=\"700\">Stale prices \u00b7 fraud caught late</text><text x=\"98\" y=\"472\" font-size=\"14\" fill=\"#8FA9C2\">the business breaks</text><defs><marker id=\"dn\" markerWidth=\"14\" markerHeight=\"14\" refX=\"7\" refY=\"11\" orient=\"auto\"><path d=\"M2 2 L7 11 L12 2\" stroke=\"#8FA9C2\" stroke-width=\"2.5\" fill=\"none\"/></marker></defs></g></svg>", "genfire": "<svg viewBox=\"0 0 520 320\" xmlns=\"http://www.w3.org/2000/svg\"><g font-family=\"Helvetica\"><text x=\"260\" y=\"34\" fill=\"#8FA9C2\" font-size=\"15\" text-anchor=\"middle\">Gen 1 \u2014 one database per city</text><g transform=\"translate(40,70)\"><ellipse cx=\"45\" cy=\"12\" rx=\"45\" ry=\"14\" fill=\"#12233B\" stroke=\"#E0534B\" stroke-width=\"2\"/><rect x=\"0\" y=\"12\" width=\"90\" height=\"70\" fill=\"#12233B\" stroke=\"none\"/><path d=\"M0 12 v70 M90 12 v70\" stroke=\"#E0534B\" stroke-width=\"2\"/><ellipse cx=\"45\" cy=\"82\" rx=\"45\" ry=\"14\" fill=\"#0E1C30\" stroke=\"#E0534B\" stroke-width=\"2\"/><text x=\"45\" y=\"50\" fill=\"#AEE3F5\" font-size=\"12\" text-anchor=\"middle\">city 1</text><path d=\"M35 -6 q-8 14 4 20 q-10 -2 -6 -18\" fill=\"#E0534B\" opacity=\"0.85\"/><path d=\"M52 -10 q-6 16 5 22 q-9 -3 -7 -20\" fill=\"#E4B75A\" opacity=\"0.8\"/></g><g transform=\"translate(155,70)\"><ellipse cx=\"45\" cy=\"12\" rx=\"45\" ry=\"14\" fill=\"#12233B\" stroke=\"#E0534B\" stroke-width=\"2\"/><rect x=\"0\" y=\"12\" width=\"90\" height=\"70\" fill=\"#12233B\" stroke=\"none\"/><path d=\"M0 12 v70 M90 12 v70\" stroke=\"#E0534B\" stroke-width=\"2\"/><ellipse cx=\"45\" cy=\"82\" rx=\"45\" ry=\"14\" fill=\"#0E1C30\" stroke=\"#E0534B\" stroke-width=\"2\"/><text x=\"45\" y=\"50\" fill=\"#AEE3F5\" font-size=\"12\" text-anchor=\"middle\">city 2</text><path d=\"M35 -6 q-8 14 4 20 q-10 -2 -6 -18\" fill=\"#E0534B\" opacity=\"0.85\"/><path d=\"M52 -10 q-6 16 5 22 q-9 -3 -7 -20\" fill=\"#E4B75A\" opacity=\"0.8\"/></g><g transform=\"translate(270,70)\"><ellipse cx=\"45\" cy=\"12\" rx=\"45\" ry=\"14\" fill=\"#12233B\" stroke=\"#2E8BC0\" stroke-width=\"2\"/><rect x=\"0\" y=\"12\" width=\"90\" height=\"70\" fill=\"#12233B\" stroke=\"none\"/><path d=\"M0 12 v70 M90 12 v70\" stroke=\"#2E8BC0\" stroke-width=\"2\"/><ellipse cx=\"45\" cy=\"82\" rx=\"45\" ry=\"14\" fill=\"#0E1C30\" stroke=\"#2E8BC0\" stroke-width=\"2\"/><text x=\"45\" y=\"50\" fill=\"#AEE3F5\" font-size=\"12\" text-anchor=\"middle\">city 3</text></g><text x=\"260\" y=\"250\" fill=\"#E0534B\" font-size=\"17\" text-anchor=\"middle\" font-weight=\"700\">no global view \u00b7 schemas clash \u00b7 ETL breaks at 3 AM</text><text x=\"260\" y=\"284\" fill=\"#8FA9C2\" font-size=\"14\" text-anchor=\"middle\">100\u00d7 the cities. Same architecture. It buckles.</text></g></svg>"};
+
+/* ---- slide content model ---- */
+const FOOT = 'BIG DATA ANALYTICS · SESSIONS 1–2 · Jammy';
+
+const slides = [
+
+/* 1 COVER */
+{type:'cover', html:`
+  <div class="brand">MBA (Business Analytics) · Trimester IV</div>
+  <h1>Big Data<br>Analytics</h1>
+  <div class="cs">for Business Decision-Making</div>
+  <div class="rule"></div>
+  <div class="meta">
+    <b>Sessions 1 &amp; 2</b> — Architecture Before Algorithms<br>
+    Running case: <b>Uber Engineering</b> — 100+ Petabytes with Minute Latency<br>
+    Instructor: <b>Jammy</b> — Sr. Director (Banking) · Founder, TrioSapiens
+  </div>`},
+
+/* 2 ROADMAP */
+{eyebrow:['Roadmap','Two sessions, one story'],
+ title:'We learn this the way Uber lived it',
+ lede:'No definitions up front. A real company hits a wall, rebuilds, hits another wall, rebuilds again. Every concept arrives the moment the story needs it.',
+ table:{head:['Act','What happens'], rows:[
+   ['The 2 AM crisis','A billion-dollar marketplace freezes. Why?'],
+   ['Gen 1 catches fire','The databases that launched Uber start to buckle'],
+   ['Gen 2 — the big bet','Uber wagers everything on Hadoop. This is the heart of it.'],
+   ['The 24-hour wall','Gen 2 works… and then quietly fails'],
+   ['Gen 3 — the fix','Kafka + Hudi bring it to minute-level'],
+   ['Under the hood','How HDFS, MapReduce and Spark actually work'],
+   ['Your turn','Your industry, your project, your Gen 1'],
+ ]}},
+
+/* 3 CRISIS */
+{eyebrow:['The hook','2:00 AM'],
+ title:'It’s 2 AM. Surge pricing just broke.',
+ lede:'Riders open the app and see the wrong price. They cancel. Drivers see no demand and log off. A live marketplace is unravelling — and it’s costing crores every hour.',
+ pts:[
+   'The dashboard is frozen on <b>yesterday’s</b> numbers.',
+   'The pricing model didn’t change. Something <b>underneath</b> it did.',
+   'One question on the war-room screen: <b>what actually broke?</b>',
+ ],
+ box:{k:'board', lab:'Hold this thought', t:'The model is almost never the problem. The plumbing underneath — how data is stored and moved — usually is. That’s the whole course.'}},
+
+/* 4 GUESS THE NUMBER */
+{eyebrow:['Before we dig in','Guess first'],
+ title:'How much data does Uber sit on?',
+ lede:'Don’t look it up. Commit to a guess — say it out loud at your table. We’ll reveal it, and the number is the reason this course exists.',
+ pts:[
+   'A) A few hundred gigabytes — like a big laptop',
+   'B) A few hundred terabytes — like a server room',
+   'C) 100+ <b>petabytes</b> — a million gigabytes, and then a hundred more',
+ ],
+ box:{k:'take', lab:'The answer', t:'C. 100+ petabytes ≈ 73 billion floppy disks — a stack more than halfway to the Moon. No single machine on Earth can hold it, let alone query it live. That is what “big data” actually means.'}},
+
+/* 5 DIVIDER GEN1 */
+{type:'divider', eyebrow:['Act I','How it began'],
+ dtitle:'Gen 1: it worked', part:'A handful of databases, a few cities, and a startup moving fast'},
+
+/* 6 GEN 1 WORKED */
+{eyebrow:['Act I','2010–2014'],
+ title:'The setup that launched a company',
+ lede:'Before 2014, Uber ran on ordinary databases — and that was exactly the right call.',
+ pts:[
+   'A few <b>MySQL / PostgreSQL</b> instances. One per city, roughly.',
+   'A single <b>Vertica</b> warehouse for the analysts.',
+   'Data dumped in as raw <b>JSON</b> — fast to write, no rules.',
+   'Three people could answer any question in seconds.',
+ ],
+ box:{k:'board', lab:'The point', t:'Every startup begins here. The architecture that launches a company is never the one that scales it — and that’s fine. It’s a phase, not a mistake.'}},
+
+/* 7 GEN 1 FIRE (genfire diagram) */
+{eyebrow:['Act I','Then Uber exploded'],
+ title:'<span class="accent">Hundreds</span> of cities. The same setup.',
+ lede:'Growth is the villain here — not bad engineering. 100× the data hit an architecture built for a handful of cities, and it started to burn.',
+ svg:'genfire',
+ box:{k:'take', lab:'The break', t:'No global view — every cross-city question meant stitching databases by hand. Schemas clashed. A 3 AM script failure meant an empty dashboard by morning. Uber had outgrown Gen 1.'}},
+
+/* 8 DISCUSS 1 */
+{eyebrow:['Your turn','Role-play · 8 min'],
+ title:'You are Uber’s VP of Engineering. 2014.',
+ box:{k:'discuss', lab:'Decide, then defend',
+   t:'The CEO just told you: 200 new cities this year. Your data platform already can’t keep up.',
+   s:'Databases siloed by city · the warehouse is maxed out · ETL is held together by two engineers and one just quit. You have ten minutes to tell the board what you build, what you buy, and what you kill.'}},
+
+/* 9 DIVIDER GEN2 */
+{type:'divider', eyebrow:['Act II','The heart of the story'],
+ dtitle:'Gen 2: the big bet', part:'Uber wagers its data future on Hadoop'},
+
+/* 10 THE BET */
+{eyebrow:['Act II','2014–2017'],
+ title:'The bet: put everything in one lake',
+ lede:'Instead of many databases straining under scale, Uber pours all its raw data into a single Hadoop “data lake” spread across thousands of cheap machines.',
+ pts:[
+   'Store first, structure later — “<b>schema on read</b>”.',
+   'Runs on <b>commodity hardware</b>: add machines, get more room. No forklift upgrades.',
+   'One place where every question can finally be asked.',
+ ],
+ box:{k:'board', lab:'Why it’s bold', t:'This flips the model. Gen 1 asked “which database has my answer?” Gen 2 says “it’s all in one lake — now let’s build the tools to fish in it.”'}},
+
+/* 11 HDFS (hdfs diagram) */
+{eyebrow:['Act II','The foundation'],
+ title:'HDFS — how the lake actually holds the water',
+ lede:'A giant file isn’t stored whole. It’s chopped into 128 MB blocks, scattered across machines, and every block is copied three times.',
+ svg:'hdfs',
+ box:{k:'take', lab:'Why a manager cares', t:'A server dies at 2 AM? Two other copies of every block are already elsewhere. Nothing is lost, nothing stops. Resilience isn’t luck — it’s designed in, because at this scale machines fail constantly.'}},
+
+/* 12 PARQUET (guess-style number) */
+{eyebrow:['Act II','One clever decision'],
+ title:'From messy JSON to neat columns',
+ lede:'Uber swapped raw JSON for a columnar format called Parquet. Sounds like a footnote. It cut cost and query time by roughly 10×.',
+ pts:[
+   'Ask “average fare?” — JSON reads <b>every</b> field of every record.',
+   'Parquet reads <b>only the fare column</b> and skips the rest.',
+   'Same columns compress 5–10× better, and carry their own schema.',
+ ],
+ box:{k:'take', lab:'The lesson', t:'A single storage-format choice moved Uber’s costs and speed by an order of magnitude. Architecture decisions are business decisions.'}},
+
+/* 13 GEN 2 AT SCALE (numbers) */
+{eyebrow:['Act II','What it grew into'],
+ title:'By 2017, one of the biggest clusters on Earth',
+ lede:'The bet paid off — spectacularly — at a scale few companies ever reach.',
+ pts:[
+   '<b>Tens of petabytes</b> in HDFS.',
+   '<b>10,000+</b> compute cores.',
+   '<b>100,000</b> batch jobs every single day.',
+   'Presto for quick questions · Spark for heavy lifting · Hive for the giants.',
+ ],
+ box:{k:'board', lab:'And yet…', t:'Gen 2 solved storage completely. In solving it, it quietly created a new problem — one that would force a third rebuild.'}},
+
+/* 14 DIVIDER 24HR */
+{type:'divider', eyebrow:['Act II','The catch'],
+ dtitle:'The 24-hour wall', part:'Gen 2 works perfectly… for yesterday'},
+
+/* 15 THE WALL (chain diagram) */
+{eyebrow:['Act II','The second break'],
+ title:'Why the data was always a day old',
+ lede:'Uber is a real-time marketplace, but Gen 2 was a batch system. Follow the chain — one technical constraint at the top ends in a business failure at the bottom.',
+ svg:'chain',
+ box:{k:'take', lab:'Executive takeaway', t:'Gen 2 could answer “what happened yesterday?” The business needed “what is happening right now?” One append-only storage rule cascaded all the way into stale prices and undetected fraud.'}},
+
+/* 16 DISCUSS 2 */
+{eyebrow:['Your turn','Role-play · 8 min'],
+ title:'You are Uber’s CTO. 2017.',
+ box:{k:'discuss', lab:'Choose your path',
+   t:'Tens of petabytes stored — but every number is 24 hours old, and the board wants real-time.',
+   s:'Three options on the table: rebuild ingestion on Kafka · patch Hadoop to allow updates · buy a vendor product. Each costs differently in money, time, risk and team morale. What do you choose — and what are you willing to give up?'}},
+
+/* 17 DIVIDER GEN3 */
+{type:'divider', eyebrow:['Act III','The fix'],
+ dtitle:'Gen 3: minute-level', part:'Kafka and Hudi — without throwing Hadoop away'},
+
+/* 18 GEN 3 */
+{eyebrow:['Act III','2017+'],
+ title:'What Uber actually built',
+ lede:'They kept the whole lake — HDFS, Parquet, Presto, Spark, Hive. They changed only how data <b>arrives</b>.',
+ pts:[
+   '<b>Kafka + Marmaray</b> — every database streams its changes in 10–15 min mini-batches, not full rebuilds.',
+   '<b>Apache Hudi</b> — Uber-built; finally lets you <b>update a single row</b> in the lake.',
+   'Latency: <b>24 hours → under 30 minutes</b>. Modelled tables within an hour.',
+ ],
+ box:{k:'take', lab:'The elegant part', t:'Hudi exists to break exactly step 1 of that failure chain. Fix the one constraint at the top, and the whole cascade collapses. Evolution, not revolution.'}},
+
+/* 19 RECAP (gens diagram) */
+{eyebrow:['Zoom out','Three generations, five years'],
+ title:'The same company, unrecognisable underneath',
+ svg:'gens',
+ box:{k:'board', lab:'Carry this into Session 2', t:'Every break came from growth. Every rebuild was incremental — they never threw the lake away. And the bottleneck was never the model. Next we open up the machinery: HDFS, MapReduce, Spark.'}},
+
+/* 20 DIVIDER S2 */
+{type:'divider', eyebrow:['Session 2','Under the hood'],
+ dtitle:'How it actually works', part:'The three ideas that make the lake usable'},
+
+/* 21 HDFS RECAP short */
+{eyebrow:['Session 2','Storage'],
+ title:'HDFS in one breath',
+ lede:'You already met it in the Uber story. Here’s the whole idea, distilled.',
+ pts:[
+   'Files → 128 MB <b>blocks</b>, scattered across DataNodes.',
+   'Each block copied <b>3×</b> for safety.',
+   'A master <b>NameNode</b> remembers where everything lives.',
+   'Lose a machine → the system quietly heals itself.',
+ ],
+ box:{k:'take', lab:'The manager’s takeaway', t:'Storage that assumes failure is normal. That assumption is what lets Uber sleep at night on 100+ PB.'}},
+
+/* 22 MAPREDUCE */
+{eyebrow:['Session 2','Processing'],
+ title:'MapReduce — divide, then conquer',
+ lede:'How do you count something across a lake too big for one machine? You split the work, run it everywhere at once, then combine.',
+ pts:[
+   '<b>Map</b> — each machine processes its own chunk in parallel.',
+   '<b>Shuffle</b> — group the results by key.',
+   '<b>Reduce</b> — add them up into the final answer.',
+   'Daily revenue per city = map trip→city · reduce = sum of fares. One job, every city, at once.',
+ ],
+ box:{k:'board', lab:'Scale', t:'Uber ran ~100,000 of these a day — revenue, cancellations, fraud signals — all the same divide-and-conquer shape.'}},
+
+/* 23 BATCH VS STREAM (batch diagram) */
+{eyebrow:['Session 2','The trade-off you already felt'],
+ title:'Batch vs. streaming',
+ lede:'The 24-hour wall was this trade-off in disguise. Now name it.',
+ svg:'batch',
+ box:{k:'take', lab:'The skill', t:'Batch = cheap but late. Streaming = live but pricey. Real platforms use both — Uber runs batch for analytics, streaming for surge and fraud. The judgement is choosing the mix per decision.'}},
+
+/* 24 SPARK */
+{eyebrow:['Session 2','The modern engine'],
+ title:'Spark — where it all comes together',
+ lede:'Spark keeps data in memory instead of writing to disk between every step — so it runs far faster than classic MapReduce, with friendlier tools on top.',
+ pts:[
+   'DataFrames, SQL, machine-learning, streaming — one engine.',
+   'Uber runs ~<b>10,000 Spark jobs a day</b>.',
+   'Where data engineering, analytics and ML finally meet.',
+   'The second half of this course lives here — in Spark &amp; Databricks.',
+ ],
+ box:{k:'board', lab:'Looking ahead', t:'From Session 3 on, you stop watching and start building — your own pipelines, in Spark.'}},
+
+/* 25 DIVIDER YOUR TURN */
+{type:'divider', eyebrow:['Now it’s yours','The mirror'],
+ dtitle:'Your turn', part:'Every company has a Gen 1 about to break'},
+
+/* 26 YOUR INDUSTRY */
+{eyebrow:['Your turn','The mirror'],
+ title:'Where is your 24-hour wall?',
+ lede:'Uber’s story is a mirror. Hold it up to your own industry.',
+ pts:[
+   '<b>Banking</b> — fraud models run overnight; fraud happens in milliseconds.',
+   '<b>Healthcare</b> — records siloed; no view across hospitals.',
+   '<b>Retail</b> — inventory refreshes every few hours; stockouts are live.',
+   '<b>Insurance</b> — claims take days; the customer moved on in hours.',
+ ],
+ box:{k:'discuss', lab:'Discuss', t:'What is the latency of your single most important decision — and what would it take to cut it in half?'}},
+
+/* 27 PROJECT */
+{eyebrow:['Your turn','The project'],
+ title:'Build your own Gen 1 → Gen 3',
+ lede:'Do for a chosen industry what these two sessions did for Uber.',
+ pts:[
+   'Pick a domain and tell its data-architecture story.',
+   'What’s its Gen 1? What’s breaking? What would Gen 2 &amp; 3 look like?',
+   'Build a working pipeline in <b>Spark / Databricks</b>.',
+   'Connect it to a real decision — show the number that moves.',
+   'Teams of 4 · the best become teaching cases · <b>start early</b>.',
+ ]},
+
+/* 28 SESSION 3 PREP */
+{eyebrow:['Next session','Come ready to type'],
+ title:'Session 3 is hands-on',
+ lede:'No slides next time — you’ll be at the keyboard.',
+ pts:[
+   'Create a free <b>Databricks Community Edition</b> account (~5 min, no card).',
+   'Bring a charged laptop with a working browser login.',
+   'Skim the HDFS command sheet so it looks familiar.',
+   'We’ll run <code>ls · mkdir · put · get · cat</code> on a live cluster.',
+ ],
+ box:{k:'board', lab:'Come ready to type', t:'Session 3 is where everything on these slides becomes muscle memory.'}},
+
+/* 29 CLOSE */
+{type:'divider', eyebrow:['Sessions 1 & 2','The one thing'],
+ dtitle:'Architecture before algorithms.', part:'The bottleneck is never the model. Always ask which layer is breaking.'},
+
+];
+
+/* ---- renderer ---- */
+const deck = document.getElementById('deck');
+
+function tableHTML(t){
+  const head = '<tr>'+t.head.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  const rows = t.rows.map(r=>{
+    const peak = r[0]==='Uber' ? ' class="peak"':'';
+    return `<tr${peak}>`+r.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+  }).join('');
+  return `<table>${head}${rows}</table>`;
+}
+function colsHTML(cols){
+  return '<div class="cols">'+cols.map(c=>
+    `<div class="col"><h3>${c.h}</h3><ul>${c.li.map(x=>`<li>${x}</li>`).join('')}</ul></div>`
+  ).join('')+'</div>';
+}
+function gensHTML(gens){
+  let out='<div class="gens">';
+  gens.forEach((g,i)=>{
+    const brk = g.t==='Gen 2' ? '' : '';
+    out+=`<div class="gen"><div class="gt">${g.t}</div><div class="gd">${g.d}</div><div class="yr">${g.yr}</div></div>`;
+    if(i<gens.length-1) out+='<div class="arrow">→</div>';
+  });
+  return out+'</div>';
+}
+function boxHTML(b){
+  const sub = b.s ? `<span class="subtxt">${b.s}</span>` : '';
+  return `<div class="box ${b.k}"><span class="lab">${b.lab}</span>${b.t}${sub}</div>`;
+}
+
+slides.forEach((s,idx)=>{
+  const el=document.createElement('section');
+  el.className='slide'+(s.type?(' '+s.type):'');
+  let inner='';
+
+  if(s.type==='cover'){
+    inner = s.html;
+  } else if(s.type==='divider'){
+    inner = `<div class="eyebrow"><span class="sec">${s.eyebrow[0]}</span> &nbsp;·&nbsp; ${s.eyebrow[1]}</div>
+             <h1>${s.dtitle}</h1><div class="part">${s.part}</div>`;
+  } else {
+    if(s.eyebrow) inner += `<div class="eyebrow"><span class="sec">${s.eyebrow[0]}</span> &nbsp;·&nbsp; ${s.eyebrow[1]}</div>`;
+    if(s.title)   inner += `<h2>${s.title}</h2>`;
+    if(s.lede)    inner += `<div class="lede">${s.lede}</div>`;
+    const hasFig = s.svg && SVGS[s.svg];
+    // pts + figure  ->  side-by-side split (text left, diagram right)
+    if(s.pts && hasFig){
+      inner += `<div class="split"><div><ul class="pts${s.pts.length>4?' small':''}">${s.pts.map(p=>`<li>${p}</li>`).join('')}</ul></div><div class="fig-side">${SVGS[s.svg]}</div></div>`;
+    } else if(s.pts){
+      inner += `<ul class="pts${s.pts.length>4?' small':''}">${s.pts.map(p=>`<li>${p}</li>`).join('')}</ul>`;
+    } else if(hasFig && !s.cols && !s.table){
+      // lede-only slide with a figure: pull lede into a left column beside the diagram
+      // (lede was already appended above; move it into split)
+      inner = inner.replace(/<div class="lede">([\s\S]*?)<\/div>/, '');
+      inner += `<div class="split"><div><div class="lede">${s.lede||''}</div></div><div class="fig-side">${SVGS[s.svg]}</div></div>`;
+      s.__figdone = true;
+    }
+    // cols + figure -> figure sits centered under a slightly tighter cols (cols read fast)
+    if(s.cols)    inner += colsHTML(s.cols);
+    if(s.table)   inner += tableHTML(s.table);
+    if(s.gens)    inner += gensHTML(s.gens);
+    // lede-only or cols + figure (no pts consumed above) -> centered figure, sized down
+    if(hasFig && !s.pts && !s.__figdone){
+      inner += `<div class="figure${s.cols?' fig-compact':''}">${SVGS[s.svg]}</div>`;
+    }
+    if(s.box)     inner += boxHTML(s.box);
+
+  }
+
+  // footer chrome (not on cover)
+  if(s.type!=='cover'){
+    inner += `<div class="foot"><span class="brandf">${FOOT}</span><span class="pnum">${String(idx+1).padStart(2,'0')} / ${String(slides.length).padStart(2,'0')}</span></div>`;
+  }
+  inner += `<div class="pbar" style="width:${((idx+1)/slides.length*100)}%"></div>`;
+  el.innerHTML = inner;
+  deck.appendChild(el);
+});
+
+/* ---- navigation ---- */
+let cur=0;
+const all=[...document.querySelectorAll('.slide')];
+function show(n){
+  cur=Math.max(0,Math.min(all.length-1,n));
+  all.forEach((s,i)=>s.classList.toggle('active',i===cur));
+  location.hash = cur+1;
+}
+function go(d){ show(cur+d); }
+function toggleFull(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(-1);}
+  else if(e.key==='Home'){show(0);}
+  else if(e.key==='End'){show(all.length-1);}
+  else if(e.key.toLowerCase()==='f'){toggleFull();}
+  else if(/^[0-9]$/.test(e.key)){/* reserved */}
+});
+// swipe (touch)
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX);
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50) go(dx<0?1:-1);
+});
+// deep-link
+const h=parseInt(location.hash.replace('#',''));
+show(isNaN(h)?0:h-1);
+</script>
+</body>
+</html>
