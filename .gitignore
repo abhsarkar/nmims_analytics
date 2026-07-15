@@ -1,0 +1,17 @@
+# JetBrains IDE
+.idea/
+
+# Claude Code worktrees
+.claude/worktrees/
+.claude/
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
