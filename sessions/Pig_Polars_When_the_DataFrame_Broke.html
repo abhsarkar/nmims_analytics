@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 2 — When the DataFrame Broke</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- STANDARD THEME PALETTE ---- */
+    --bg:#08111F;
+    --bg2:#0F1E33;
+    --card:#14263D;
+    --border:#233A56;
+    --text:#F4F8FC;
+    --text2:#A8B8CC;
+    --muted:#70849A;
+    --accent:#3BA5E7;
+    --accent2:#F0B44D;
+    --success:#39B87F;
+    --warning:#F0B44D;
+    --danger:#E35B5B;
+
+    /* ---- SPACING SYSTEM ---- */
+    --r-sm:10px;
+    --r-md:16px;
+    --r-lg:20px;
+    --pad:clamp(28px,4.5vw,72px);
+    --gap:22px;
+    --shadow:0 18px 50px -20px rgba(0,0,0,.65);
+
+    --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  html,body{height:100%}
+  body{
+    font-family:var(--font);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, #173252 0%, #08111F 55%, #050A12 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    overflow:hidden;
+  }
+
+  /* ---------- STAGE / SLIDES ---------- */
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:var(--pad);
+    opacity:0;visibility:hidden;
+    transform:translateY(14px);
+    transition:opacity .55s cubic-bezier(.22,.61,.36,1),
+               transform .55s cubic-bezier(.22,.61,.36,1),
+               visibility 0s linear .55s;
+    overflow:hidden;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:translateY(0);transition-delay:0s}
+  .slide-inner{width:100%;max-width:1180px;margin:0 auto}
+
+  .slide.active .reveal{animation:rise .6s cubic-bezier(.22,.61,.36,1) both}
+  .slide.active .reveal:nth-child(2){animation-delay:.06s}
+  .slide.active .reveal:nth-child(3){animation-delay:.12s}
+  .slide.active .reveal:nth-child(4){animation-delay:.18s}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ---------- TYPOGRAPHY ---------- */
+  .eyebrow{
+    font-size:clamp(11px,1.05vw,13px);
+    text-transform:uppercase;
+    letter-spacing:.25em;
+    font-weight:700;
+    color:var(--accent);
+    margin-bottom:18px;
+  }
+  .eyebrow .sep{color:var(--muted);margin:0 .5em;font-weight:500}
+  h1.title{
+    font-weight:800;
+    font-size:clamp(30px,4.4vw,52px);
+    line-height:1.05;
+    letter-spacing:-.02em;
+    margin-bottom:20px;
+  }
+  h2.title{
+    font-weight:800;
+    font-size:clamp(26px,3.4vw,40px);
+    line-height:1.08;
+    letter-spacing:-.02em;
+    margin-bottom:14px;
+  }
+  .lede{
+    font-weight:400;
+    font-size:clamp(16px,1.55vw,21px);
+    line-height:1.55;
+    color:var(--text2);
+    max-width:60ch;
+    margin-bottom:26px;
+  }
+  strong,.b{font-weight:700;color:var(--text)}
+  .accent{color:var(--accent)}
+  .gold{color:var(--accent2)}
+  .danger{color:var(--danger)}
+  .ok{color:var(--success)}
+  p{line-height:1.6}
+
+  /* ---------- BULLETS ---------- */
+  ul.clean{list-style:none;display:flex;flex-direction:column;gap:14px;max-width:64ch}
+  ul.clean li{
+    position:relative;padding-left:26px;
+    font-size:clamp(15px,1.4vw,18px);
+    line-height:1.5;color:var(--text2);
+  }
+  ul.clean li::before{
+    content:"";position:absolute;left:2px;top:.55em;
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+  }
+  ul.clean li strong{color:var(--text)}
+
+  /* ---------- CARDS & GRIDS ---------- */
+  .grid{display:grid;gap:var(--gap)}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--r-md);
+    padding:24px 24px;
+    box-shadow:var(--shadow);
+  }
+  .card h3{
+    font-size:clamp(13px,1.2vw,15px);
+    font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:12px;
+  }
+  .card.pig h3{color:var(--accent2)}
+  .card.polars h3{color:var(--success)}
+  .card.pandas h3{color:var(--accent)}
+  .card p{font-size:clamp(13px,1.25vw,15.5px);color:var(--text2);line-height:1.5}
+  .card .lead-q{font-style:italic;color:var(--text);font-size:clamp(14px,1.3vw,16px);margin-bottom:14px}
+
+  /* ---------- FLOW (arrow chips) ---------- */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .flow .step{
+    flex:1;min-width:0;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-sm);
+    padding:16px 14px;text-align:center;
+    font-weight:600;font-size:clamp(12px,1.15vw,14.5px);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .flow .arrow{display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:20px;padding:0 10px;font-weight:700}
+  .flow.pig .step{border-color:#4a3a1c;background:#1c1608}
+  .flow.pig .arrow{color:var(--accent2)}
+  .flow.polars .step{border-color:#123a30;background:#08201a}
+  .flow.polars .arrow{color:var(--success)}
+  .flow.pandas .step{border-color:#123354;background:#0a1c30}
+
+  /* ---------- CODE ---------- */
+  pre.code{
+    background:#0A1524;
+    border:1px solid var(--border);
+    border-radius:var(--r-md);
+    padding:22px 24px;
+    font-family:var(--mono);
+    font-size:clamp(12.5px,1.15vw,15px);
+    line-height:1.62;
+    color:#DCE7F2;
+    overflow:auto;
+    box-shadow:var(--shadow);
+  }
+  pre.code .c{color:var(--muted)}       /* comment */
+  pre.code .k{color:var(--accent2)}     /* keyword */
+  pre.code .s{color:var(--success)}     /* string */
+  pre.code .fn{color:var(--accent)}     /* function */
+  .code-label{
+    display:inline-block;font-family:var(--font);font-weight:700;
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    padding:5px 12px;border-radius:999px;margin-bottom:10px;
+  }
+  .lbl-pig{background:rgba(240,180,77,.14);color:var(--accent2)}
+  .lbl-polars{background:rgba(57,184,127,.14);color:var(--success)}
+  .lbl-pandas{background:rgba(59,165,231,.14);color:var(--accent)}
+
+  /* ---------- TABLES ---------- */
+  table.t{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:var(--r-md);border:1px solid var(--border);box-shadow:var(--shadow)}
+  table.t th{
+    background:var(--bg2);
+    color:var(--text);
+    font-weight:700;text-align:left;
+    padding:14px 18px;font-size:clamp(13px,1.2vw,15px);
+    border-bottom:2px solid var(--accent);
+    letter-spacing:.01em;
+  }
+  table.t td{
+    padding:12px 18px;font-size:clamp(12.5px,1.15vw,14.5px);
+    color:var(--text2);border-bottom:1px solid var(--border);
+  }
+  table.t tr:last-child td{border-bottom:none}
+  table.t tbody tr:nth-child(odd){background:rgba(255,255,255,.015)}
+  table.t td.mono,table.t th.mono{font-family:var(--mono)}
+  table.t td.pig{color:var(--accent2)}
+  table.t td.pol{color:var(--success)}
+  table.t td.pd{color:var(--accent)}
+
+  /* ---------- CALLOUT ---------- */
+  .callout{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-left:3px solid var(--accent);
+    border-radius:var(--r-md);
+    padding:20px 24px;
+    box-shadow:var(--shadow);
+    font-size:clamp(14px,1.35vw,17px);
+    line-height:1.55;color:var(--text2);
+  }
+  .callout .tag{display:block;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-size:12px;margin-bottom:8px}
+  .callout.gold{border-left-color:var(--accent2)}
+  .callout.gold .tag{color:var(--accent2)}
+  .callout.ok{border-left-color:var(--success)}
+  .callout.ok .tag{color:var(--success)}
+  .callout.danger{border-left-color:var(--danger)}
+  .callout.danger .tag{color:var(--danger)}
+  .callout strong{color:var(--text)}
+
+  /* ---------- DIVIDER SLIDE ---------- */
+  .slide--divider .slide-inner{max-width:1000px}
+  .slide--divider .eyebrow{margin-bottom:28px}
+  .divider-title{
+    font-weight:800;
+    font-size:clamp(40px,7.2vw,92px);
+    line-height:1.0;letter-spacing:-.03em;
+    margin-bottom:26px;
+  }
+  .divider-sub{
+    font-weight:400;font-size:clamp(16px,1.8vw,23px);
+    color:var(--text2);max-width:52ch;line-height:1.5;
+  }
+
+  /* ---------- STORY SLIDE ---------- */
+  .story .kicker{color:var(--accent2)}
+  .scene{
+    font-family:var(--mono);font-size:clamp(12px,1.15vw,14px);
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:18px;
+  }
+  .story-line{
+    font-size:clamp(20px,2.6vw,34px);
+    font-weight:600;line-height:1.32;letter-spacing:-.01em;
+    max-width:24ch;margin-bottom:22px;
+  }
+  .cast{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
+  .cast .who{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:8px 18px 8px 8px}
+  .cast .dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--bg)}
+  .cast .who span{font-size:14px;color:var(--text2)}
+  .cast .who span b{color:var(--text);display:block;font-weight:700;font-size:14px}
+
+  .split-labels{display:flex;gap:var(--gap)}
+  .metric{font-family:var(--mono);font-weight:700;font-size:clamp(26px,3.4vw,42px);line-height:1}
+  .metric.danger{color:var(--danger)}
+  .metric.ok{color:var(--success)}
+
+  /* ---------- helpers ---------- */
+  .mt{margin-top:22px}.mt-s{margin-top:14px}.mt-l{margin-top:30px}
+  .row{display:flex;gap:var(--gap);align-items:stretch}
+  .col{flex:1;min-width:0}
+  .center{text-align:center}
+  .subtle{color:var(--muted);font-size:clamp(13px,1.2vw,15px)}
+
+  /* ---------- FOOTER / NAV ---------- */
+  .footer{
+    position:fixed;bottom:22px;left:var(--pad);right:var(--pad);
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11.5px;letter-spacing:.08em;color:var(--muted);
+    text-transform:uppercase;pointer-events:none;z-index:20;
+  }
+  .footer .num b{color:var(--accent);font-weight:700}
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:30;transition:width .4s ease}
+  .nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:25}
+  .nav button{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--card);border:1px solid var(--border);
+    color:var(--text2);cursor:pointer;font-size:15px;
+    display:flex;align-items:center;justify-content:center;
+    transition:.2s;
+  }
+  .nav button:hover{border-color:var(--accent);color:var(--accent)}
+  @media (max-width:720px){
+    .g2,.g3,.g4{grid-template-columns:1fr}
+    .flow{flex-direction:column}
+    .flow .arrow{transform:rotate(90deg);padding:6px 0}
+    .row,.split-labels{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 · TITLE / DIVIDER -->
+  <section class="slide slide--divider active">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Big Data Analytics<span class="sep">·</span>MBA (Business Analytics)<span class="sep">·</span>Session 2</div>
+      <h1 class="divider-title reveal">When the<br>DataFrame Broke</h1>
+      <p class="divider-sub reveal">The night QuickKart's orders stopped fitting on one machine — and the two tools the data team reached for. <span class="accent">Pig</span> for when it's too big, <span class="ok">Polars</span> for when it's too slow.</p>
+    </div>
+  </section>
+
+  <!-- 2 · RECAP BRIDGE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Continuing the story</div>
+      <h2 class="title reveal">Last week we sorted the data. This week we act on it.</h2>
+      <p class="lede reveal">Session 1 ended with one lesson: the same business question is minutes of work on structured data and weeks on unstructured. Whatever shape it starts in, once it's clean it lands in something you already know — a <strong>DataFrame</strong>.</p>
+      <div class="flow pandas reveal mt">
+        <div class="step">Structured<br>order tables</div>
+        <div class="arrow">→</div>
+        <div class="step">Semi-structured<br>app logs, JSON</div>
+        <div class="arrow">→</div>
+        <div class="step">Unstructured<br>images, reviews</div>
+        <div class="arrow">→</div>
+        <div class="step" style="border-color:var(--accent);color:var(--text)"><strong>All become a<br>DataFrame</strong></div>
+      </div>
+      <div class="callout mt reveal"><span class="tag">Today</span>Two more dialects of that same DataFrame: <strong class="gold">Pig</strong> (for when it's too big for one machine) and <strong class="ok">Polars</strong> (for when it's too slow on one machine).</div>
+    </div>
+  </section>
+
+  <!-- 3 · CAST / STORY SETUP -->
+  <section class="slide story">
+    <div class="slide-inner">
+      <div class="eyebrow kicker reveal">The setup</div>
+      <div class="scene reveal">QuickKart HQ · Data team · The week before the Festive Sale</div>
+      <div class="story-line reveal">For months, one laptop and <span class="accent">pandas</span> answered every question QuickKart asked.</div>
+      <p class="lede reveal">Read the orders file, filter, group, sort, done. It never failed — because the data always fit. That is about to change. Meet the team who will spend tonight finding out.</p>
+      <div class="cast reveal mt-s">
+        <div class="who"><div class="dot" style="background:var(--accent)">P</div><span><b>Priya</b>Data analyst · lives in pandas</span></div>
+        <div class="who"><div class="dot" style="background:var(--accent2)">A</div><span><b>Arjun</b>Data engineer · runs the cluster</span></div>
+        <div class="who"><div class="dot" style="background:var(--success)">M</div><span><b>Meera</b>Analytics lead · asks the questions</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · PANDAS ANCHOR -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Anchor</div>
+      <h2 class="title reveal">The DataFrame Priya already knows</h2>
+      <div class="row mt reveal">
+        <div class="col">
+          <span class="code-label lbl-pandas">pandas</span>
+          <pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+
+orders = pd.<span class="fn">read_csv</span>(<span class="s">'orders.csv'</span>)
+
+big = orders[orders[<span class="s">'OrderValue'</span>] &gt; <span class="k">1000</span>]
+
+summary = (
+  big.<span class="fn">groupby</span>(<span class="s">'Region'</span>)[<span class="s">'OrderValue'</span>]
+     .<span class="fn">agg</span>([<span class="s">'count'</span>,<span class="s">'sum'</span>,<span class="s">'mean'</span>])
+)
+<span class="c"># runs immediately, line by line</span></pre>
+        </div>
+        <div class="col">
+          <table class="t">
+            <thead><tr><th>Concept</th><th>pandas term</th></tr></thead>
+            <tbody>
+              <tr><td>Table</td><td class="mono pd">DataFrame</td></tr>
+              <tr><td>Row</td><td>record / index entry</td></tr>
+              <tr><td>Column</td><td>field / Series</td></tr>
+              <tr><td>Keep rows</td><td class="mono">boolean filter, .query()</td></tr>
+              <tr><td>Group + summarize</td><td class="mono">.groupby().agg()</td></tr>
+              <tr><td>Sort / top n</td><td class="mono">.sort_values() / .head()</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · THE BREAK (STORY) -->
+  <section class="slide story">
+    <div class="slide-inner">
+      <div class="eyebrow kicker reveal">The break · 8:04 PM</div>
+      <div class="scene reveal">Festive Sale night · orders arriving 40× faster than a normal evening</div>
+      <div class="story-line reveal">Priya runs her usual notebook. This time the orders file is <span class="danger">40 GB</span>.</div>
+      <pre class="code reveal" style="max-width:640px">orders = pd.<span class="fn">read_csv</span>(<span class="s">'orders_festive.csv'</span>)
+<span class="danger">MemoryError</span>  <span class="c"># the file is bigger than the laptop's RAM</span></pre>
+      <p class="lede reveal mt-s">pandas loads the <strong>whole table into memory</strong> before doing anything. When the table is bigger than the machine, there is no "line by line" — it dies on the first line. The laptop was never the problem. The <strong>one-machine assumption</strong> was.</p>
+    </div>
+  </section>
+
+  <!-- 6 · TWO WALLS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Two different failures</div>
+      <h2 class="title reveal">Same night, two different walls</h2>
+      <p class="lede reveal">Down the hall, Arjun's job didn't crash — it just wouldn't <em>finish</em>. Two problems that look similar and need completely different answers.</p>
+      <div class="grid g2 mt reveal">
+        <div class="card">
+          <h3 style="color:var(--danger)">Priya — too big</h3>
+          <div class="metric danger">40 GB &gt; 16 GB RAM</div>
+          <p class="mt-s">The data doesn't <strong>fit</strong> on one machine. No amount of waiting helps — you need <strong class="gold">many machines</strong> reading pieces in parallel.</p>
+          <p class="mt-s" style="color:var(--accent2)">→ This is a job for Pig.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--warning)">Arjun — too slow</h3>
+          <div class="metric" style="color:var(--warning)">6 hours &amp; counting</div>
+          <p class="mt-s">The data <strong>fits</strong>, but the tool wastes work and uses one CPU core. You need a smarter, <strong class="ok">faster engine</strong> on the same machine.</p>
+          <p class="mt-s" style="color:var(--success)">→ This is a job for Polars.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · VOCAB -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Foundation terms</div>
+      <h2 class="title reveal">Three words you'll need tonight</h2>
+      <p class="lede reveal">They sound technical, but each one names something Priya already does in pandas.</p>
+      <div class="grid g3 mt reveal">
+        <div class="card pandas">
+          <h3>Rows &amp; columns</h3>
+          <p>A <strong>row</strong> is one record — one order. A <strong>column</strong> is one attribute of every record (Region, OrderValue).</p>
+          <pre class="code mt-s" style="font-size:12.5px">orders.shape
+<span class="c"># (n_rows, n_columns)</span></pre>
+        </div>
+        <div class="card pig">
+          <h3>Tuple</h3>
+          <p>The formal word for <strong>"one row."</strong> Pig and databases call a row a tuple — an ordered set of field values.</p>
+          <pre class="code mt-s" style="font-size:12.5px">(<span class="s">1</span>, <span class="s">'West'</span>, <span class="s">500</span>)
+<span class="c"># one tuple</span></pre>
+        </div>
+        <div class="card polars">
+          <h3>Predicate</h3>
+          <p>The <strong>condition</strong> you test each row against to decide whether to keep it — what goes inside a filter.</p>
+          <pre class="code mt-s" style="font-size:12.5px">OrderValue &gt; <span class="s">1000</span>
+<span class="c"># true / false per row</span></pre>
+        </div>
+      </div>
+      <div class="callout mt reveal"><strong>Put together:</strong> <span style="font-family:var(--mono)">FILTER orders BY OrderValue &gt; 1000</span> = keep every <strong>tuple</strong> where the <strong>predicate</strong> is true.</div>
+    </div>
+  </section>
+
+  <!-- 8 · MEET THE TOOLS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Meet the tools</div>
+      <h2 class="title reveal">Two DataFrames for two different walls</h2>
+      <p class="lede reveal">Same three moves — filter, group, aggregate — expressed at a different scale.</p>
+      <div class="grid g2 mt reveal">
+        <div class="card pig">
+          <h3>Pig</h3>
+          <div class="lead-q">"My DataFrame doesn't fit on one machine."</div>
+          <ul class="clean">
+            <li>A scripting language, <strong>Pig Latin</strong>, for describing table transformations.</li>
+            <li>Runs the same filter / group / aggregate ideas across a <strong>Hadoop cluster</strong>.</li>
+            <li>Never loads the whole table into memory — the cluster reads it in pieces.</li>
+          </ul>
+        </div>
+        <div class="card polars">
+          <h3>Polars</h3>
+          <div class="lead-q">"My DataFrame is too slow on one machine."</div>
+          <ul class="clean">
+            <li>A Python DataFrame library — syntax feels close to <strong>pandas</strong>.</li>
+            <li>A <strong>Rust engine</strong> underneath: multi-threaded, and it plans before it runs.</li>
+            <li>Still one machine, but built to use every core of it well.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · WHY PIG EXISTED -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Hadoop-era context</div>
+      <h2 class="title reveal">Why Pig existed in the first place</h2>
+      <div class="flow pig reveal mt">
+        <div class="step">Order log<br>outgrows one machine</div>
+        <div class="arrow">→</div>
+        <div class="step">Data spreads across<br>many machines</div>
+        <div class="arrow">→</div>
+        <div class="step">MapReduce works,<br>but Java is slow to write</div>
+        <div class="arrow">→</div>
+        <div class="step">Pig gives a<br>DataFrame-like language</div>
+      </div>
+      <div class="row mt reveal">
+        <div class="col">
+          <ul class="clean">
+            <li>Pig let analysts write transformations <strong>without hand-coding Java MapReduce</strong>.</li>
+            <li>It handled messy semi-structured data — logs, web events, clickstreams.</li>
+            <li>The language is <strong>procedural</strong>: each line names the next relation, like chaining pandas methods.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="callout gold"><span class="tag">Teaching point</span>Pig is <strong>not the storage system</strong>. It's a way to describe work over data — the warehouse stays HDFS; Pig just writes the pick-list.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · ARCHITECTURE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">System view</div>
+      <h2 class="title reveal">Architecture, side by side</h2>
+      <div class="grid g2 mt reveal">
+        <div>
+          <span class="code-label lbl-pig">Pig — cluster-scale</span>
+          <div class="flow pig" style="margin-bottom:14px">
+            <div class="step">Parser</div><div class="arrow">→</div>
+            <div class="step">Optimizer</div><div class="arrow">→</div>
+            <div class="step">Compiler</div><div class="arrow">→</div>
+            <div class="step">Execution<br>Engine</div>
+          </div>
+          <ul class="clean">
+            <li>Entered via the <strong>Grunt Shell</strong> or Pig Server — runs as MapReduce jobs on HDFS.</li>
+            <li>On Tez or Spark, Pig builds a <strong>DAG</strong> instead — same script, faster plan.</li>
+          </ul>
+        </div>
+        <div>
+          <span class="code-label lbl-polars">Polars — single-machine speed</span>
+          <div class="flow polars" style="margin-bottom:14px">
+            <div class="step">DataFrame<br>code</div><div class="arrow">→</div>
+            <div class="step">LazyFrame<br>plan</div><div class="arrow">→</div>
+            <div class="step">Query<br>optimizer</div><div class="arrow">→</div>
+            <div class="step">.collect()</div>
+          </div>
+          <ul class="clean">
+            <li>Same one laptop the whole time — <strong>no cluster to manage</strong>.</li>
+            <li>Speed comes from planning + using <strong>every CPU core</strong>, not more machines.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout mt reveal"><strong>The shared idea:</strong> both separate <em>"what transformations I want"</em> from <em>"how the engine should execute them"</em> — the separation a plain pandas script doesn't have.</div>
+    </div>
+  </section>
+
+  <!-- 11 · PIG DATA MODEL -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Foundation</div>
+      <h2 class="title reveal">Pig's data model — in DataFrame language</h2>
+      <div class="row mt reveal">
+        <div class="col">
+          <table class="t">
+            <thead><tr><th>Pig term</th><th>Looks like</th><th>DataFrame</th></tr></thead>
+            <tbody>
+              <tr><td>Relation</td><td class="mono">orders</td><td>A DataFrame</td></tr>
+              <tr><td>Tuple</td><td class="mono">(1, West, 500)</td><td>One row</td></tr>
+              <tr><td>Field</td><td class="mono">OrderValue</td><td>One column</td></tr>
+              <tr><td>Bag</td><td class="mono">{ tuple, ... }</td><td>Grouped rows</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="col">
+          <pre class="code">orders = <span class="k">LOAD</span> <span class="s">'orders.csv'</span>
+  <span class="k">USING</span> <span class="fn">PigStorage</span>(<span class="s">','</span>) <span class="k">AS</span>
+  (OrderID:int, Region:chararray,
+   Category:chararray, OrderValue:double);
+
+grouped = <span class="k">GROUP</span> orders <span class="k">BY</span> Region;
+<span class="c">-- each group holds a bag of rows</span>
+<span class="c">-- like orders.groupby('Region')</span></pre>
+        </div>
+      </div>
+      <div class="callout mt reveal">Once you see <strong>"relation = DataFrame, tuple = row, bag = grouped rows,"</strong> every later Pig command reads as a pandas operation with a formal name.</div>
+    </div>
+  </section>
+
+  <!-- 12 · LAZY DIVIDER -->
+  <section class="slide slide--divider">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The idea that saves them both</div>
+      <h1 class="divider-title reveal">Lazy<br>execution</h1>
+      <p class="divider-sub reveal">The one trick Pig and Polars share — and the reason Arjun's rewrite finished in minutes instead of hours.</p>
+    </div>
+  </section>
+
+  <!-- 13 · WHAT LAZY MEANS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Lazy execution</div>
+      <h2 class="title reveal">What does "lazy" actually mean?</h2>
+      <div class="flow polars reveal mt">
+        <div class="step">Write the recipe</div><div class="arrow">→</div>
+        <div class="step">Keep it on paper</div><div class="arrow">→</div>
+        <div class="step">Optimize the steps</div><div class="arrow">→</div>
+        <div class="step">Cook only when<br>someone orders</div>
+      </div>
+      <ul class="clean mt-l reveal" style="max-width:none">
+        <li>A pandas DataFrame is <strong>eager</strong>: every line executes the moment you write it.</li>
+        <li>Lazy systems build a <strong>plan</strong>, check what output is actually needed, then run the plan at the end.</li>
+        <li>That delay enables optimization: read fewer columns, apply filters earlier, merge steps.</li>
+        <li>Execution starts only when someone asks to <strong>view or save</strong> the final result.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 14 · PIG VS POLARS CODE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Same idea, two languages</div>
+      <h2 class="title reveal">Lazy execution: Pig vs. Polars</h2>
+      <div class="callout mt-s reveal" style="border-left-color:var(--accent)"><span style="font-family:var(--mono);color:var(--text)">pandas (eager): big = orders[orders['OrderValue'] &gt; 1000]</span> &nbsp;← runs the instant you write it</div>
+      <div class="grid g2 mt reveal">
+        <div>
+          <span class="code-label lbl-pig">Pig</span>
+          <pre class="code">orders = <span class="k">LOAD</span> <span class="s">'orders.csv'</span>
+  <span class="k">USING</span> <span class="fn">PigStorage</span>(<span class="s">','</span>);
+large  = <span class="k">FILTER</span> orders <span class="k">BY</span>
+  OrderValue &gt; <span class="s">1000</span>;
+by_reg = <span class="k">GROUP</span> large <span class="k">BY</span> Region;
+summary = <span class="k">FOREACH</span> by_reg <span class="k">GENERATE</span>
+  group, <span class="fn">COUNT</span>(large);
+<span class="c">-- no job has run yet</span>
+<span class="k">DUMP</span> summary;  <span class="c">-- now it executes</span></pre>
+        </div>
+        <div>
+          <span class="code-label lbl-polars">Polars</span>
+          <pre class="code"><span class="k">import</span> polars <span class="k">as</span> pl
+
+summary = (
+  pl.<span class="fn">scan_csv</span>(<span class="s">'orders.csv'</span>)
+    .<span class="fn">filter</span>(pl.<span class="fn">col</span>(<span class="s">'OrderValue'</span>)&gt;<span class="s">1000</span>)
+    .<span class="fn">group_by</span>(<span class="s">'Region'</span>)
+    .<span class="fn">agg</span>(pl.<span class="fn">len</span>().<span class="fn">alias</span>(<span class="s">'Orders'</span>))
+)
+<span class="c"># nothing materialized yet</span>
+<span class="fn">print</span>(summary.<span class="fn">collect</span>())  <span class="c"># executes</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · EAGER VS LAZY -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Comparison</div>
+      <h2 class="title reveal">Eager vs. lazy: the key difference</h2>
+      <div class="grid g2 mt reveal">
+        <div class="card pandas">
+          <h3>pandas DataFrame — eager</h3>
+          <ul class="clean">
+            <li>Each operation produces a <strong>real result immediately</strong>.</li>
+            <li>Easy mental model: one line runs, output exists right away.</li>
+            <li>Great for small demos and interactive exploration.</li>
+            <li>Wastes work if later steps discard rows or columns you already loaded.</li>
+          </ul>
+        </div>
+        <div class="card polars">
+          <h3>Pig / Polars — lazy</h3>
+          <ul class="clean">
+            <li>Each operation just <strong>adds a step to a plan</strong> — nothing runs yet.</li>
+            <li>The optimizer can rearrange or simplify the plan before execution.</li>
+            <li>Built for large files and multi-step pipelines.</li>
+            <li>A final action triggers it: <span style="font-family:var(--mono)">DUMP, STORE, .collect()</span>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · WHY LAZY FASTER -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Optimizer ideas</div>
+      <h2 class="title reveal">Why lazy execution can be faster</h2>
+      <div class="flow polars reveal mt">
+        <div class="step">User writes<br>the pipeline</div><div class="arrow">→</div>
+        <div class="step">Optimizer rewrites<br>the plan</div><div class="arrow">→</div>
+        <div class="step">Engine executes<br>less work</div>
+      </div>
+      <div class="grid g4 mt-l reveal">
+        <div class="card"><h3 style="color:var(--success)">Predicate pushdown</h3><p>Apply filters as early as possible — ideally while the data is still being read.</p></div>
+        <div class="card"><h3 style="color:var(--success)">Projection pushdown</h3><p>Read only the columns the final answer actually needs.</p></div>
+        <div class="card"><h3 style="color:var(--success)">Combine operations</h3><p>Skip creating intermediate DataFrames nobody will use.</p></div>
+        <div class="card"><h3 style="color:var(--success)">Reorder safe steps</h3><p>Run cheap reductions before expensive joins or sorts, when it's safe.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · MORNING AFTER (STORY) -->
+  <section class="slide story">
+    <div class="slide-inner">
+      <div class="eyebrow kicker reveal">The morning after · 9:15 AM</div>
+      <div class="scene reveal">Stand-up · Meera has one question before the leadership review</div>
+      <div class="story-line reveal">"Which region had the highest sales last night, ignoring the tiny <span class="gold">₹500</span> orders?"</div>
+      <p class="lede reveal">One business question. The team now has three ways to answer it — and the next two slides show the exact same logic in Pig (for the full 40 GB on the cluster) and Polars (for a fast local slice). Watch how little actually changes.</p>
+    </div>
+  </section>
+
+  <!-- 18 · PIG SCRIPT -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Full example · the cluster answer</div>
+      <h2 class="title reveal">QuickKart regional sales — the Pig script</h2>
+      <pre class="code reveal mt-s">orders = <span class="k">LOAD</span> <span class="s">'quickkart_orders.csv'</span> <span class="k">USING</span> <span class="fn">PigStorage</span>(<span class="s">','</span>)
+  <span class="k">AS</span> (OrderID:int, Region:chararray, Category:chararray, OrderValue:double);
+
+valid     = <span class="k">FILTER</span> orders <span class="k">BY</span> OrderValue &gt; <span class="s">500</span>;
+by_region = <span class="k">GROUP</span> valid <span class="k">BY</span> Region;
+
+summary = <span class="k">FOREACH</span> by_region <span class="k">GENERATE</span>
+  group <span class="k">AS</span> Region,
+  <span class="fn">COUNT</span>(valid)          <span class="k">AS</span> NumberOfOrders,
+  <span class="fn">SUM</span>(valid.OrderValue) <span class="k">AS</span> TotalSales,
+  <span class="fn">AVG</span>(valid.OrderValue) <span class="k">AS</span> AverageOrderValue;
+
+sorted = <span class="k">ORDER</span> summary <span class="k">BY</span> TotalSales <span class="k">DESC</span>;
+<span class="k">STORE</span> sorted <span class="k">INTO</span> <span class="s">'output/regional_summary'</span> <span class="k">USING</span> <span class="fn">PigStorage</span>(<span class="s">','</span>);</pre>
+    </div>
+  </section>
+
+  <!-- 19 · POLARS VERSION -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Full example · the fast local answer</div>
+      <h2 class="title reveal">Same question — the Polars version</h2>
+      <p class="lede reveal">Identical logic, one machine, results in seconds — and it reads like the pandas Priya already knows.</p>
+      <pre class="code reveal"><span class="k">import</span> polars <span class="k">as</span> pl
+
+summary = (
+    pl.<span class="fn">scan_csv</span>(<span class="s">'quickkart_orders.csv'</span>)
+      .<span class="fn">filter</span>(pl.<span class="fn">col</span>(<span class="s">'OrderValue'</span>) &gt; <span class="s">500</span>)
+      .<span class="fn">group_by</span>(<span class="s">'Region'</span>)
+      .<span class="fn">agg</span>(
+          pl.<span class="fn">len</span>().<span class="fn">alias</span>(<span class="s">'NumberOfOrders'</span>),
+          pl.<span class="fn">col</span>(<span class="s">'OrderValue'</span>).<span class="fn">sum</span>().<span class="fn">alias</span>(<span class="s">'TotalSales'</span>),
+          pl.<span class="fn">col</span>(<span class="s">'OrderValue'</span>).<span class="fn">mean</span>().<span class="fn">round</span>(<span class="s">2</span>).<span class="fn">alias</span>(<span class="s">'AverageOrderValue'</span>)
+      )
+      .<span class="fn">sort</span>(<span class="s">'TotalSales'</span>, descending=<span class="k">True</span>)
+)
+<span class="fn">print</span>(summary.<span class="fn">collect</span>())</pre>
+    </div>
+  </section>
+
+  <!-- 20 · THREE DATAFRAMES ONE RHYTHM -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Side-by-side flow</div>
+      <h2 class="title reveal">Three DataFrames, one rhythm</h2>
+      <div class="reveal mt">
+        <span class="code-label lbl-pandas">pandas</span>
+        <div class="flow pandas" style="margin-bottom:16px">
+          <div class="step">read_csv</div><div class="arrow">→</div>
+          <div class="step">filter</div><div class="arrow">→</div>
+          <div class="step">groupby</div><div class="arrow">→</div>
+          <div class="step" style="opacity:.5">done — no trigger</div>
+        </div>
+        <span class="code-label lbl-pig">Pig</span>
+        <div class="flow pig" style="margin-bottom:16px">
+          <div class="step">LOAD</div><div class="arrow">→</div>
+          <div class="step">FILTER</div><div class="arrow">→</div>
+          <div class="step">GROUP</div><div class="arrow">→</div>
+          <div class="step">DUMP</div>
+        </div>
+        <span class="code-label lbl-polars">Polars</span>
+        <div class="flow polars">
+          <div class="step">scan_csv</div><div class="arrow">→</div>
+          <div class="step">filter</div><div class="arrow">→</div>
+          <div class="step">group_by</div><div class="arrow">→</div>
+          <div class="step">collect</div>
+        </div>
+      </div>
+      <div class="callout mt reveal">Pandas skips the last box — it has no separate trigger. Pig and Polars add one <strong>on purpose</strong>: declare the pipeline, then trigger it.</div>
+    </div>
+  </section>
+
+  <!-- 21 · CHEAT SHEET -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference</div>
+      <h2 class="title reveal">Cheat sheet: pandas → Pig → Polars</h2>
+      <table class="t reveal mt-s">
+        <thead><tr><th>pandas (you know this)</th><th>Pig</th><th>Polars</th></tr></thead>
+        <tbody>
+          <tr><td class="mono pd">pd.read_csv()</td><td class="mono pig">LOAD</td><td class="mono pol">pl.scan_csv()</td></tr>
+          <tr><td class="mono pd">df[df.col &gt; x]</td><td class="mono pig">FILTER</td><td class="mono pol">.filter(...)</td></tr>
+          <tr><td class="mono pd">df[['a','b']]</td><td class="mono pig">FOREACH GENERATE</td><td class="mono pol">.select() / .with_columns()</td></tr>
+          <tr><td class="mono pd">df.groupby()</td><td class="mono pig">GROUP</td><td class="mono pol">.group_by()</td></tr>
+          <tr><td class="mono pd">.count()/.sum()/.mean()</td><td class="mono pig">COUNT / SUM / AVG</td><td class="mono pol">pl.len(), pl.sum(), pl.mean()</td></tr>
+          <tr><td class="mono pd">.sort_values()/.head()</td><td class="mono pig">ORDER / LIMIT</td><td class="mono pol">.sort() / .head()</td></tr>
+          <tr><td class="mono pd">.drop_duplicates()</td><td class="mono pig">DISTINCT / UNION</td><td class="mono pol">.unique() / pl.concat()</td></tr>
+          <tr><td class="mono pd">.merge()</td><td class="mono pig">JOIN</td><td class="mono pol">.join(...)</td></tr>
+          <tr><td class="mono pd">.to_csv()</td><td class="mono pig">STORE</td><td class="mono pol">.sink_csv() / .write_csv()</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 22 · DIAGNOSTIC OPERATORS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference</div>
+      <h2 class="title reveal">Diagnostic operators — checking your work</h2>
+      <p class="lede reveal">No pandas or Polars equivalent — these are Grunt-shell tools for inspecting a relation before you trust it.</p>
+      <div class="grid g4 mt reveal">
+        <div class="card pig"><h3 style="color:var(--accent2)">DUMP</h3><p>Print the contents of a relation to the console.</p><pre class="code mt-s" style="font-size:12px">dump summary;</pre></div>
+        <div class="card pig"><h3 style="color:var(--accent2)">DESCRIBE</h3><p>Show the schema — field names and types.</p><pre class="code mt-s" style="font-size:12px">describe orders;</pre></div>
+        <div class="card pig"><h3 style="color:var(--accent2)">EXPLAIN</h3><p>View the logical, physical, or MapReduce plan.</p><pre class="code mt-s" style="font-size:12px">explain summary;</pre></div>
+        <div class="card pig"><h3 style="color:var(--accent2)">ILLUSTRATE</h3><p>Step through a script on a small sample — best for debugging.</p><pre class="code mt-s" style="font-size:12px">illustrate summary;</pre></div>
+      </div>
+      <div class="callout gold mt reveal"><span class="tag">Classroom habit</span>After every GROUP or JOIN, run <strong>DESCRIBE</strong> before FOREACH — it catches schema surprises before they become wrong numbers.</div>
+    </div>
+  </section>
+
+  <!-- 23 · QUICK FACTS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference</div>
+      <h2 class="title reveal">Pig, the quick facts</h2>
+      <div class="reveal mt-s">
+        <div class="subtle" style="text-transform:uppercase;letter-spacing:.14em;color:var(--accent2);font-weight:700;margin-bottom:10px">History</div>
+        <div class="flow pig">
+          <div class="step">2006<br>Built at Yahoo</div><div class="arrow">→</div>
+          <div class="step">2007<br>Open-sourced (Apache)</div><div class="arrow">→</div>
+          <div class="step">2008<br>First release</div><div class="arrow">→</div>
+          <div class="step">2010<br>Top-level Apache project</div>
+        </div>
+      </div>
+      <div class="grid g2 mt reveal">
+        <div class="card">
+          <h3 style="color:var(--accent2)">Simple data types</h3>
+          <p style="font-family:var(--mono);line-height:1.9;color:var(--text2)">
+            <span class="gold">int</span> 32-bit &nbsp;·&nbsp; <span class="gold">long</span> 64-bit<br>
+            <span class="gold">float</span> 32-bit dec &nbsp;·&nbsp; <span class="gold">double</span> 64-bit dec<br>
+            <span class="gold">chararray</span> string &nbsp;·&nbsp; <span class="gold">boolean</span> true/false<br>
+            <span class="gold">datetime</span> date+time &nbsp;·&nbsp; <span class="gold">bytearray</span> raw bytes
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--accent2)">Run modes &amp; engines</h3>
+          <p><strong>Local mode</strong> <span style="font-family:var(--mono)">(pig -x local)</span> — one JVM, local filesystem, for development.</p>
+          <p class="mt-s"><strong>MapReduce mode</strong> (default) — runs on the Hadoop cluster, reads/writes HDFS.</p>
+          <p class="mt-s" style="color:var(--success)">Three engines: MapReduce, Tez, Spark. On Tez/Spark, Pig builds a DAG — same script, better performance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24 · LIMITS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Important limits</div>
+      <h2 class="title reveal">What Polars does <span class="danger">not</span> simulate</h2>
+      <div class="grid g4 mt reveal">
+        <div class="card"><p style="color:var(--danger);font-weight:700;text-align:center">No HDFS block replication</p></div>
+        <div class="card"><p style="color:var(--danger);font-weight:700;text-align:center">No DataNode / NameNode failures</p></div>
+        <div class="card"><p style="color:var(--danger);font-weight:700;text-align:center">No distributed MapReduce jobs</p></div>
+        <div class="card"><p style="color:var(--danger);font-weight:700;text-align:center">No cluster scheduling delays</p></div>
+      </div>
+      <ul class="clean mt-l reveal" style="max-width:none">
+        <li>Polars is excellent for teaching DataFrame syntax and lazy planning — <strong>it is not a Hadoop cluster</strong>.</li>
+        <li>It can't teach fault tolerance, because it never runs on more than one machine.</li>
+        <li>Use diagrams or small file/folder simulations to teach HDFS replication and MapReduce stages.</li>
+        <li>Then move students to <strong>Spark / Databricks</strong> when they're ready for real distributed execution.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 25 · PRACTICE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Practice · your turn</div>
+      <h2 class="title reveal">Answer Meera's question yourself</h2>
+      <div class="callout gold reveal mt-s"><span class="tag">Business question</span>Which QuickKart region had the highest sales after removing orders below ₹500?</div>
+      <div class="row mt reveal">
+        <div class="col">
+          <ul class="clean">
+            <li><strong>Step 1:</strong> write it as a pandas one-liner first — the logic you already know.</li>
+            <li><strong>Step 2:</strong> map the words to commands — remove rows, group, calculate, sort.</li>
+            <li><strong>Step 3:</strong> fill the Polars blanks, then compare with the Pig pseudocode.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <pre class="code"><span class="c"># Fill in the blanks</span>
+result = (
+  pl.<span class="fn">scan_csv</span>(<span class="s">'quickkart_orders.csv'</span>)
+    .<span class="fn">filter</span>( ________________ )
+    .<span class="fn">group_by</span>( ______________ )
+    .<span class="fn">agg</span>( __________________ )
+    .<span class="fn">sort</span>( _________________ )
+)
+<span class="fn">print</span>(result.<span class="fn">collect</span>())</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26 · CLOSE / TAKEAWAY -->
+  <section class="slide slide--divider">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">How the story ends</div>
+      <h1 class="divider-title reveal" style="font-size:clamp(30px,5vw,60px)">Same logic.<br>Two escape hatches.</h1>
+      <p class="divider-sub reveal">When the DataFrame breaks because it's <span class="gold">too big</span>, reach for Pig and the cluster. When it breaks because it's <span class="ok">too slow</span>, reach for Polars and a smarter engine. The pandas thinking never changes — only the scale does.</p>
+      <div class="callout mt-l reveal" style="max-width:640px"><span class="tag">For your MBA class</span>Teach the logic first (pandas), the cluster second (Pig), the speed engine third (Polars) — and the production platform last (Spark / Databricks).</div>
+    </div>
+  </section>
+
+</div>
+
+<div class="progress" style="display:none"></div>
+<div class="footer">
+  <span>QuickKart · Big Data Analytics · Session 2</span>
+  <span class="num"><b id="cur">01</b> / <span id="total">26</span></span>
+</div>
+<div class="nav">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let i = 0;
+  const curEl = document.getElementById('cur');
+  const totEl = document.getElementById('total');
+  const bar = document.getElementById('progress');
+  totEl.textContent = String(total).padStart(2,'0');
+
+  function show(n){
+    i = Math.max(0, Math.min(total-1, n));
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+    curEl.textContent = String(i+1).padStart(2,'0');
+    bar.style.width = ((i+1)/total*100)+'%';
+  }
+  function next(){ show(i+1); }
+  function prev(){ show(i-1); }
+
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+  document.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ show(0); }
+    else if(e.key==='End'){ show(total-1); }
+  });
+  // click left/right thirds of the screen to navigate (ignoring buttons)
+  document.getElementById('deck').addEventListener('click', e=>{
+    if(e.target.closest('a')) return;
+    const x = e.clientX / window.innerWidth;
+    if(x > 0.62) next(); else if(x < 0.38) prev();
+  });
+  show(0);
+</script>
+</body>
+</html>
