@@ -15,3 +15,6 @@ venv/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Model Deployment module — generated artifacts, not source
+ModelDeployment/*.pkl
