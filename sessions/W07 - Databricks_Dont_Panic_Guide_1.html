@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Databricks — The "Don't Panic" Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08111F;--bg2:#0F1E33;--card:#14263D;--border:#233A56;
+  --text:#F4F8FC;--text2:#A8B8CC;--muted:#70849A;
+  --accent:#3BA5E7;--accent2:#F0B44D;--success:#39B87F;--danger:#E35B5B;--purple:#A98BE0;--orange:#E8854A;
+  --r:16px;--shadow:0 18px 50px -20px rgba(0,0,0,.65);
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:radial-gradient(1200px 700px at 80% -10%,#173252 0%,#08111F 55%,#050A12 100%);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:960px;margin:0 auto;padding:0 clamp(16px,3vw,28px) 80px}
+
+/* hero */
+.hero{padding:48px 0 12px;text-align:center}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.24em;font-weight:700;color:var(--orange);margin-bottom:12px}
+h1{font-weight:800;font-size:clamp(26px,5vw,48px);line-height:1.05;letter-spacing:-.03em;margin-bottom:14px}
+h2{font-weight:800;font-size:clamp(20px,2.8vw,30px);line-height:1.1;letter-spacing:-.02em;margin-bottom:10px}
+h3{font-weight:700;font-size:clamp(14px,1.4vw,17px);margin-bottom:6px}
+p.sub{font-size:clamp(14px,1.4vw,18px);line-height:1.55;color:var(--text2);max-width:56ch}
+p.sub.c{margin:0 auto}
+strong{color:var(--text)}
+.gold{color:var(--accent2)}.ok{color:var(--success)}.ac{color:var(--accent)}.or{color:var(--orange)}.pu{color:var(--purple)}.dg{color:var(--danger)}.mu{color:var(--muted)}
+
+/* permission banner */
+.perm{background:linear-gradient(135deg,rgba(232,133,74,.10),rgba(232,133,74,.03));border:1px solid rgba(232,133,74,.25);border-radius:var(--r);padding:22px 26px;margin:24px 0 32px;text-align:center}
+.perm .big{font-size:clamp(18px,2.4vw,28px);font-weight:800;line-height:1.15;margin-bottom:8px}
+.perm p{font-size:clamp(13px,1.2vw,16px);color:var(--text2);line-height:1.5;max-width:52ch;margin:0 auto}
+
+/* step nav */
+.step-nav{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.sn-btn{background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:9px 16px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:.25s;display:flex;align-items:center;gap:7px}
+.sn-btn:hover{border-color:var(--orange);color:var(--text)}
+.sn-btn.active{border-color:var(--orange);color:var(--text);background:rgba(232,133,74,.10)}
+.sn-btn .num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--border);font-size:10px;font-weight:800;color:var(--muted);transition:.2s}
+.sn-btn.active .num{background:var(--orange);color:#fff}
+.sn-hint{text-align:center;font-size:11px;color:var(--muted);margin-bottom:20px}
+
+/* panels */
+.panel{display:none;animation:fadeUp .4s ease both}
+.panel.vis{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* twin row */
+.twin{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;margin:18px 0;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
+.twin .ico{font-size:36px;line-height:1}
+.twin .tl{font-weight:800;font-size:clamp(16px,1.7vw,22px);margin-bottom:4px}
+.twin p{font-size:clamp(13px,1.2vw,15px);color:var(--text2);line-height:1.5}
+
+/* mockup browser */
+.mockup{background:#0D1926;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);margin:18px 0}
+.mock-bar{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#0A1524;border-bottom:1px solid var(--border)}
+.mock-dot{width:8px;height:8px;border-radius:50%}
+.mock-dot.r{background:#E35B5B}.mock-dot.y{background:#F0B44D}.mock-dot.g{background:#39B87F}
+.mock-url{margin-left:10px;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);padding:3px 10px;border-radius:6px;flex:1}
+.mock-body{padding:20px;min-height:120px}
+.mock-body .mock-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+
+/* mockup sidebar + content */
+.mock-layout{display:grid;grid-template-columns:160px 1fr;gap:0;min-height:200px}
+.mock-sidebar{background:#091420;border-right:1px solid var(--border);padding:14px 12px}
+.mock-sidebar .item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:12px;color:var(--muted);margin-bottom:3px;cursor:default;transition:.2s}
+.mock-sidebar .item.hi{background:rgba(232,133,74,.12);color:var(--orange)}
+.mock-sidebar .item .emoji{font-size:14px}
+.mock-main{padding:18px 20px}
+
+/* cell mockup */
+.cell{background:#0A1524;border:1px solid var(--border);border-radius:8px;margin:8px 0;overflow:hidden}
+.cell-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid rgba(35,58,86,.4)}
+.cell-type{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:rgba(232,133,74,.12);color:var(--orange)}
+.cell-run{font-size:9px;color:var(--success);margin-left:auto}
+.cell-code{padding:10px 12px;font-family:var(--mono);font-size:clamp(11px,1vw,13px);line-height:1.5;color:#DCE7F2}
+.cell-code .c{color:var(--muted)}.cell-code .k{color:var(--accent2)}.cell-code .fn{color:var(--accent)}.cell-code .s{color:var(--success)}
+.cell-out{padding:10px 12px;border-top:1px solid rgba(35,58,86,.4);font-family:var(--mono);font-size:11px;color:var(--text2);background:rgba(0,0,0,.15)}
+
+/* detail grid */
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:18px 0}
+.dc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.dc h4{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);margin-bottom:6px}
+.dc .v{font-weight:800;font-size:clamp(16px,1.8vw,22px);margin-bottom:4px;line-height:1.15}
+.dc p{font-size:12.5px;color:var(--text2);line-height:1.45}
+
+/* callout */
+.co{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:var(--r);padding:14px 18px;font-size:clamp(13px,1.2vw,15px);line-height:1.5;color:var(--text2);margin:16px 0}
+.co .tag{display:block;font-weight:700;color:var(--orange);letter-spacing:.06em;text-transform:uppercase;font-size:10px;margin-bottom:4px}
+.co.ok{border-left-color:var(--success)}.co.ok .tag{color:var(--success)}
+.co.ac{border-left-color:var(--accent)}.co.ac .tag{color:var(--accent)}
+.co.gold{border-left-color:var(--accent2)}.co.gold .tag{color:var(--accent2)}
+.co.dg{border-left-color:var(--danger)}.co.dg .tag{color:var(--danger)}
+
+/* reveal */
+.reveal-box{cursor:pointer;transition:.3s}
+.reveal-box .hidden{opacity:0;max-height:0;overflow:hidden;transition:.4s}
+.reveal-box.open .hidden{opacity:1;max-height:500px;margin-top:12px}
+.reveal-box .tap{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:8px;transition:.3s}
+.reveal-box.open .tap{opacity:0;max-height:0}
+
+/* jargon killer table */
+table.jt{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);margin:16px 0}
+table.jt th{background:var(--bg2);color:var(--text);font-weight:700;text-align:left;padding:10px 16px;font-size:12px;border-bottom:2px solid var(--orange)}
+table.jt td{padding:10px 16px;font-size:clamp(12px,1.1vw,14px);color:var(--text2);border-bottom:1px solid var(--border);vertical-align:top}
+table.jt tr:last-child td{border-bottom:none}
+table.jt tbody tr:nth-child(odd){background:rgba(255,255,255,.015)}
+table.jt td:first-child{color:var(--orange);font-weight:700;white-space:nowrap}
+
+section.blk{padding:6px 0 0}
+
+@media(max-width:640px){
+  .mock-layout{grid-template-columns:1fr}
+  .mock-sidebar{display:none}
+  .dgrid{grid-template-columns:1fr}
+  .twin{grid-template-columns:1fr}
+}
+
+/* Accurate Databricks UI elements */
+.db-new-btn{display:inline-block;background:#1B6ACB;color:#fff;font-size:12px;font-weight:700;padding:6px 16px;border-radius:6px}
+.mock-sidebar .item.you-need{background:rgba(232,133,74,.08);border-left:2px solid var(--orange)}
+.new-dropdown{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:10px 0;box-shadow:0 12px 40px rgba(0,0,0,.5);margin-top:8px}
+.new-drop-title{padding:6px 14px 8px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.new-drop-item{padding:7px 14px;font-size:12.5px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,.04)}
+.new-drop-item.you-need{background:rgba(232,133,74,.08);color:var(--text)}
+.new-drop-item.dim{opacity:.4}
+.badge-you{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);margin-left:6px}
+.stat-chip{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--muted)}
+.stat-chip strong{color:var(--text);margin-left:4px}
+
+/* Notebook toolbar */
+.nb-toolbar{display:flex;align-items:center;gap:0;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15);flex-wrap:wrap}
+.nb-menu{font-size:12px;color:var(--muted);padding:4px 10px;cursor:default}
+.nb-lang{font-size:12px;color:var(--accent);font-weight:600;padding:4px 10px;margin-left:4px;border:1px solid rgba(59,165,231,.2);border-radius:4px}
+.nb-runall{font-size:11px;font-weight:700;color:var(--text);background:rgba(59,165,231,.15);border:1px solid rgba(59,165,231,.25);border-radius:6px;padding:5px 12px}
+.nb-server{font-size:11px;color:var(--muted);padding:5px 10px;opacity:.5}
+.nb-server-hi{font-size:11px;color:var(--success);padding:5px 10px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+/* Empty cell */
+.nb-cell-empty{display:flex;align-items:center;gap:0;background:rgba(255,255,255,.03);border:2px solid rgba(59,165,231,.3);border-radius:8px;padding:12px 0;min-height:44px}
+.nb-play{display:inline-flex;align-items:center;justify-content:center;background:#1B6ACB;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;margin:0 10px}
+.nb-linenum{color:var(--muted);font-family:var(--mono);font-size:12px;margin-left:auto;padding-right:14px}
+.nb-cursor{color:var(--accent);font-size:16px;animation:blink 1s infinite;margin-left:12px}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+.nb-genie{text-align:center;margin-top:12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:999px;padding:8px 18px;display:inline-block;margin-left:50%;transform:translateX(-50%)}
+
+/* Step-by-step path */
+.path-steps{display:flex;flex-direction:column;gap:0;margin:8px 0}
+.path-step{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px}
+.path-num{display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--orange);color:#fff;font-weight:800;font-size:14px}
+.path-title{font-size:clamp(13px,1.3vw,16px);font-weight:600;margin-bottom:2px}
+.path-desc{font-size:clamp(11px,1.1vw,13px);color:var(--muted);line-height:1.4}
+.path-arrow{text-align:center;font-size:16px;color:var(--muted);padding:4px 0;padding-left:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="eyebrow">Before you open it · the "Don't Panic" guide</div>
+  <h1>What on earth<br>is Databricks?</h1>
+  <p class="sub c">You've never seen it. You've never used it. You may have heard the name and immediately felt stressed. This page exists so that by the time you actually open Databricks, <strong>nothing surprises you.</strong></p>
+</div>
+
+<div class="perm">
+  <div class="big">You are <span class="or">not</span> here to become an engineer.</div>
+  <p>You will not memorise commands. You will not install anything. You will not break anything. Databricks is free (Community Edition), runs in your browser, and the worst thing that can happen is you see an error message — which you'll just delete and try again.</p>
+</div>
+
+<!-- ============ STEP NAV ============ -->
+<div class="step-nav" id="nav">
+  <button class="sn-btn active" data-t="p1"><span class="num">1</span>What is it?</button>
+  <button class="sn-btn" data-t="p2"><span class="num">2</span>The screen</button>
+  <button class="sn-btn" data-t="p3"><span class="num">3</span>Notebooks</button>
+  <button class="sn-btn" data-t="p4"><span class="num">4</span>Clusters</button>
+  <button class="sn-btn" data-t="p5"><span class="num">5</span>Storage</button>
+  <button class="sn-btn" data-t="p6"><span class="num">6</span>What you DO</button>
+  <button class="sn-btn" data-t="p7"><span class="num">7</span>Jargon killer</button>
+</div>
+<div class="sn-hint">tap each step — go in order the first time</div>
+
+<!-- ============ PANEL 1: WHAT IS IT ============ -->
+<div class="panel vis" id="p1">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 1 · What even is this thing?</div>
+  <h2>Start here: the race car and the engine</h2>
+  <p class="sub">Forget the website. Forget the logo. There are only two things to understand.</p>
+
+  <div class="twin">
+    <div class="ico">🏎️</div>
+    <div>
+      <div class="tl"><span class="or">Spark</span> is the engine.</div>
+      <p>Spark is a very fast engine for processing huge amounts of data. Think of it as <strong>the engine inside a Formula 1 car</strong> — incredibly powerful, but you wouldn't buy a bare engine and try to drive it down the road. You need a car around it.</p>
+    </div>
+  </div>
+
+  <div class="twin">
+    <div class="ico">🏁</div>
+    <div>
+      <div class="tl"><span class="or">Databricks</span> is the race car built around that engine.</div>
+      <p>Databricks wraps Spark in a friendly car — with a dashboard, a steering wheel, a seat, and buttons you can actually press. <strong>Engine included, ready to drive.</strong> You don't install Spark. You don't configure Spark. You open a browser, log in, and the engine is already running.</p>
+    </div>
+  </div>
+
+  <div class="co ok"><span class="tag">Why this matters to you</span>When someone says "we use Spark," they mean the engine. When they say "we use Databricks," they mean the whole car. In class, <strong>you're driving the car</strong>. You don't need to understand the engine's internals any more than you need to understand combustion to drive a Honda.</div>
+
+  <div class="dgrid">
+    <div class="dc">
+      <h4>What it replaces</h4>
+      <div class="v">Excel, but for huge data</div>
+      <p>When your CSV is 40 GB and Excel crashes or freezes, Databricks handles it without blinking. Same verbs — filter, group, total, sort — just on a much bigger desk.</p>
+    </div>
+    <div class="dc">
+      <h4>Who uses it</h4>
+      <div class="v">Everyone large</div>
+      <p>Shell, Flipkart, HDFC, Grab, thousands of companies. If an Indian enterprise says "data platform," there's a good chance Databricks is underneath.</p>
+    </div>
+    <div class="dc">
+      <h4>What it costs you</h4>
+      <div class="v">₹0</div>
+      <p><strong>Community Edition is free.</strong> No credit card, no trial expiry. It's Databricks' way of letting students and small teams try the car without buying it.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ============ PANEL 2: THE SCREEN ============ -->
+<div class="panel" id="p2">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 2 · What will you see?</div>
+  <h2>The hotel lobby — one door to everything</h2>
+  <p class="sub">When you log in, you'll see a screen that looks like this. It has a sidebar on the left and a main area on the right. That's it. Here's what each part is for.</p>
+
+  <div class="twin">
+    <div class="ico">🏨</div>
+    <div>
+      <div class="tl">Think of it as a hotel lobby.</div>
+      <p>You walk into a hotel. The reception desk is right there. Signs point to rooms (notebooks), the kitchen (cluster), and storage (DBFS). You don't need a map — the lobby shows you everything. <strong>The sidebar IS the lobby.</strong></p>
+    </div>
+  </div>
+
+  <!-- ACCURATE MOCKUP: Home screen with +New dropdown -->
+  <div class="mockup">
+    <div class="mock-bar">
+      <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      <span class="mock-url">community.cloud.databricks.com</span>
+    </div>
+    <div class="mock-layout">
+      <div class="mock-sidebar">
+        <div style="padding:8px 10px 10px"><span class="db-new-btn">+ New</span></div>
+        <div class="item hi"><span class="emoji">🏠</span> Home</div>
+        <div class="item"><span class="emoji">📖</span> Learn</div>
+        <div class="item"><span class="emoji">📂</span> Workspace</div>
+        <div class="item"><span class="emoji">🕐</span> Recents</div>
+        <div class="item"><span class="emoji">📚</span> Catalog</div>
+        <div class="item"><span class="emoji">⚙️</span> Jobs &amp; Pipelines</div>
+        <div class="item you-need"><span class="emoji">⚡</span> Compute</div>
+        <div class="item"><span class="emoji">🔍</span> Discover</div>
+        <div class="item"><span class="emoji">🏪</span> Marketplace</div>
+        <div style="padding:10px 10px 4px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700">SQL</div>
+        <div class="item"><span class="emoji">✏️</span> SQL Editor</div>
+        <div class="item" style="color:rgba(112,132,154,.4)"><span class="emoji" style="opacity:.4">…</span> <span style="opacity:.5">+ 6 more</span></div>
+      </div>
+      <div class="mock-main">
+        <div style="font-size:clamp(16px,1.8vw,22px);font-weight:700;margin-bottom:14px">Welcome to Databricks</div>
+        <!-- Stats bar -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="stat-chip">🔥 Day streak <strong>2</strong></div>
+          <div class="stat-chip">🎓 Courses taken <strong>0</strong></div>
+          <div class="stat-chip">📊 Data sets <strong>0</strong></div>
+        </div>
+        <!-- +New dropdown overlay -->
+        <div class="new-dropdown">
+          <div class="new-drop-title">When you click <span style="color:var(--orange);font-weight:800">+ New</span> you'll see:</div>
+          <div class="new-drop-item you-need">📋 <strong>Add or upload data</strong> <span class="badge-you">← you'll use this</span></div>
+          <div class="new-drop-item you-need">📓 <strong>Notebook</strong> <span class="badge-you">← you'll use this</span></div>
+          <div class="new-drop-item dim">✏️ Query</div>
+          <div class="new-drop-item dim">📊 Dashboard</div>
+          <div class="new-drop-item dim">🤖 Genie Agent</div>
+          <div class="new-drop-item dim">📐 Metric view</div>
+          <div class="new-drop-item dim">🔧 Visual data prep</div>
+          <div class="new-drop-item dim">⚙️ Job</div>
+          <div class="new-drop-item dim" style="border:none">… and more (ignore all of these)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotated guide -->
+  <div class="dgrid" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="dc" style="border-top:3px solid var(--orange)">
+      <h4>The big blue button</h4>
+      <div class="v" style="font-size:18px">+ New</div>
+      <p>Top-left corner. This is where you create notebooks and upload data. <strong>You'll click this first.</strong></p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--success)">
+      <h4>Compute (in the sidebar)</h4>
+      <div class="v" style="font-size:18px">⚡ Compute</div>
+      <p>This is where you start the cluster (the kitchen). <strong>You'll visit once</strong>, create a cluster, then forget about it.</p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--danger)">
+      <h4>Everything else</h4>
+      <div class="v" style="font-size:18px;color:var(--danger)">Ignore it</div>
+      <p>SQL Editor, Genie Agents, Jobs, Marketplace, Catalog — <strong>none of this is for you.</strong> It's for engineers. Pretend it isn't there.</p>
+    </div>
+  </div>
+
+  <div class="co ok" style="border-left-width:4px"><span class="tag">✅ Good news — the hardest step is gone</span>Older tutorials say "first, create a cluster." The Free Edition uses <strong>serverless compute</strong> — the kitchen is already running. You open a notebook, press ▶, and it works. No cluster setup, no 5-minute wait, no troubleshooting. Step 4 of this guide explains what changed.</div>
+</section>
+</div>
+
+<!-- ============ PANEL 3: NOTEBOOKS ============ -->
+<div class="panel" id="p3">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 3 · Notebooks</div>
+  <h2>The end of "email me the output"</h2>
+  <p class="sub">A notebook is just a document where you can write text AND run code, and see the result right there. Think Google Docs meets a calculator.</p>
+
+  <div class="twin">
+    <div class="ico">📓</div>
+    <div>
+      <div class="tl">A notebook is a page with boxes.</div>
+      <p>Each box is called a <strong>cell</strong>. A cell can contain a note (text) or a small piece of code. You press ▶ on a code cell and the result appears <strong>directly below it</strong> — no separate window, no email, no export. The answer is right there.</p>
+    </div>
+  </div>
+
+  <p class="sub" style="margin:16px 0 8px"><strong>When you first create a notebook, it looks like this — blank and waiting:</strong></p>
+
+  <!-- ACCURATE MOCKUP: Empty notebook matching screenshot 2 -->
+  <div class="mockup">
+    <div class="mock-bar">
+      <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      <span class="mock-url">New Notebook 2026-08-08 13:27:31</span>
+    </div>
+    <div class="mock-layout">
+      <div class="mock-sidebar" style="width:140px">
+        <div style="padding:8px 10px 10px"><span class="db-new-btn" style="font-size:11px;padding:5px 12px">+ New</span></div>
+        <div class="item"><span class="emoji">🏠</span> Home</div>
+        <div class="item"><span class="emoji">📖</span> Learn</div>
+        <div class="item hi"><span class="emoji">📂</span> Workspace</div>
+        <div class="item"><span class="emoji">🕐</span> Recents</div>
+        <div class="item"><span class="emoji">📚</span> Catalog</div>
+        <div class="item"><span class="emoji">⚡</span> Compute</div>
+      </div>
+      <div class="mock-main" style="padding:0">
+        <!-- Notebook toolbar -->
+        <div class="nb-toolbar">
+          <span class="nb-menu">File</span>
+          <span class="nb-menu">Edit</span>
+          <span class="nb-menu">View</span>
+          <span class="nb-menu">Run</span>
+          <span class="nb-menu">Help</span>
+          <span class="nb-lang">Python ▾</span>
+          <span style="flex:1"></span>
+          <span class="nb-runall">▶ Run all</span>
+          <span class="nb-server">○ Serverless</span>
+        </div>
+        <!-- Empty cell -->
+        <div style="padding:16px 20px;min-height:140px">
+          <div class="nb-cell-empty">
+            <span class="nb-play">▶ ▾</span>
+            <span class="nb-linenum">1</span>
+            <span class="nb-cursor">|</span>
+          </div>
+          <div style="text-align:center;margin-top:32px;color:var(--muted);font-size:12px">— or —</div>
+          <div class="nb-genie">🤖 Let <span style="color:#9D4EDD">Genie Code</span> train a model&nbsp;&nbsp;▸</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotated parts of the notebook UI -->
+  <div class="dgrid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    <div class="dc" style="border-top:3px solid var(--orange)">
+      <h4>The ▶ play button</h4>
+      <div class="v" style="font-size:18px">Left of every cell</div>
+      <p>This is the <strong>only button you need.</strong> Click it (or press Shift+Enter) and the code in that cell runs. Result appears below.</p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--accent2)">
+      <h4>Python ▾ (top bar)</h4>
+      <div class="v" style="font-size:18px">Leave it alone</div>
+      <p>This tells the notebook what language to use. It defaults to Python. <strong>Don't change it.</strong> The notebook we give you is already set up.</p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--success)">
+      <h4>▶ Run all (top right)</h4>
+      <div class="v" style="font-size:18px">The nuclear option</div>
+      <p>Runs every cell top to bottom. Useful if you want to <strong>restart everything</strong>. But in the lab, you'll run cells one at a time.</p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--danger)">
+      <h4>Genie Code / Serverless</h4>
+      <div class="v" style="font-size:18px;color:var(--danger)">Ignore</div>
+      <p>AI features and paid compute. Not for Community Edition. <strong>Pretend you can't see them.</strong></p>
+    </div>
+  </div>
+
+  <p class="sub" style="margin:20px 0 8px"><strong>After we load the lab notebook, it'll look like this — pre-filled and ready:</strong></p>
+
+  <!-- MOCKUP: Notebook with cells filled in -->
+  <div class="mockup">
+    <div class="mock-bar">
+      <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      <span class="mock-url">QuickKart_Spark_Lab.py</span>
+    </div>
+    <div class="mock-body">
+      <!-- Cell 1: markdown -->
+      <div class="cell">
+        <div class="cell-bar"><span class="cell-type" style="background:rgba(59,165,231,.12);color:var(--accent)">Markdown</span></div>
+        <div style="padding:10px 12px;font-size:13px;color:var(--text2)">
+          <strong style="font-size:15px">Step 1 — Load the log data</strong><br>
+          We'll read the QuickKart server logs from DBFS. The file is already uploaded.
+        </div>
+      </div>
+      <!-- Cell 2: code -->
+      <div class="cell">
+        <div class="cell-bar"><span class="cell-type">Python</span><span class="cell-run">✓ ran in 2.1s</span></div>
+        <div class="cell-code">
+          <span class="c"># Read the log file — one line does it</span><br>
+          df = spark.<span class="fn">read</span>.<span class="fn">csv</span>(<span class="s">"/FileStore/quickkart_logs.csv"</span>, header=<span class="k">True</span>)
+        </div>
+        <div class="cell-out">DataFrame with 200,000 rows and 8 columns</div>
+      </div>
+      <!-- Cell 3: code -->
+      <div class="cell">
+        <div class="cell-bar"><span class="cell-type">Python</span><span class="cell-run">✓ ran in 0.4s</span></div>
+        <div class="cell-code">
+          <span class="c"># Show the first 5 rows — like peeking at a spreadsheet</span><br>
+          <span class="fn">display</span>(df.<span class="fn">limit</span>(<span class="k">5</span>))
+        </div>
+        <div class="cell-out" style="font-size:10px">
+          <table style="width:100%;color:var(--text2);border-collapse:collapse;font-family:var(--mono)">
+            <tr style="color:var(--orange);font-weight:700"><td>ip</td><td>timestamp</td><td>method</td><td>url</td><td>status</td></tr>
+            <tr><td>192.168.1.42</td><td>2024-10-14 17:04:03</td><td>GET</td><td>/product/shoes</td><td>200</td></tr>
+            <tr><td>10.0.0.88</td><td>2024-10-14 17:04:05</td><td>GET</td><td>/cart</td><td>200</td></tr>
+            <tr><td>172.16.5.12</td><td>2024-10-14 17:04:07</td><td>POST</td><td>/checkout</td><td>302</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dgrid">
+    <div class="dc">
+      <h4>What you read</h4>
+      <div class="v">The English above the code</div>
+      <p>Every code cell has a <strong>comment</strong> (the grey line starting with #) that tells you in plain English what it does. Read the comment, glance at the result. That's your job.</p>
+    </div>
+    <div class="dc">
+      <h4>What you press</h4>
+      <div class="v">▶ Run (or Shift+Enter)</div>
+      <p>Click the little play button on a cell, or press Shift+Enter. The result appears below. <strong>One button.</strong></p>
+    </div>
+    <div class="dc">
+      <h4>What if it breaks?</h4>
+      <div class="v">Red text = just try again</div>
+      <p>An error message appears in red. It's not you — it's usually a typo or a file that hasn't been uploaded yet. <strong>Nothing is destroyed.</strong> Fix or re-run.</p>
+    </div>
+  </div>
+
+  <div class="co ok"><span class="tag">The old way vs. the notebook way</span><strong>Before notebooks:</strong> analyst writes code → runs it on a server → copies the output → pastes into an email → sends to the manager → manager asks a follow-up → repeat. <strong>With notebooks:</strong> the code, the output, the notes, and the charts are all in one living document. Meera opens the same notebook and sees everything. End of email chains.</div>
+</section>
+</div>
+
+<!-- ============ PANEL 4: COMPUTE ============ -->
+<div class="panel" id="p4">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 4 · Compute</div>
+  <h2>The kitchen is already built — just walk in</h2>
+  <p class="sub">This is the part every tutorial gets wrong. Older versions of Databricks made you "create a cluster" before you could run anything. <strong>The Free Edition doesn't.</strong> It uses something called serverless compute — the kitchen is already running. You just start cooking.</p>
+
+  <div class="twin">
+    <div class="ico">🍳</div>
+    <div>
+      <div class="tl">In old Databricks: you had to build the kitchen before cooking.</div>
+      <p>Tutorials, YouTube videos, and even some textbooks will tell you to "create a cluster." That was the old way — like renting a kitchen, turning on the gas, waiting 5 minutes. <strong>The Free Edition skips all of that.</strong> The kitchen (compute) is already there. When you open a notebook and press ▶, it just runs.</p>
+    </div>
+  </div>
+
+  <!-- Serverless mockup in notebook toolbar -->
+  <div class="mockup">
+    <div class="mock-bar">
+      <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      <span class="mock-url">Your notebook</span>
+    </div>
+    <div style="padding:0">
+      <div class="nb-toolbar">
+        <span class="nb-menu">File</span>
+        <span class="nb-menu">Edit</span>
+        <span class="nb-menu">View</span>
+        <span class="nb-menu">Run</span>
+        <span class="nb-menu">Help</span>
+        <span class="nb-lang">Python ▾</span>
+        <span style="flex:1"></span>
+        <span class="nb-runall">▶ Run all</span>
+        <span class="nb-server-hi">○ Serverless <span class="badge-you">← this is your kitchen</span></span>
+      </div>
+      <div style="padding:16px 20px;font-size:13px;color:var(--text2);text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">✅</div>
+        <strong style="color:var(--success)">Serverless compute is already connected.</strong><br>
+        Press ▶ on any cell and it runs. No setup. No waiting.
+      </div>
+    </div>
+  </div>
+
+  <div class="dgrid" style="grid-template-columns:1fr 1fr">
+    <div class="dc" style="border-top:3px solid var(--success)">
+      <h4>Free Edition (what you have)</h4>
+      <div class="v ok">Serverless — already on</div>
+      <p>No cluster to create. No waiting. You open a notebook, press ▶, and it runs. <strong>This is the only thing you need to know.</strong></p>
+    </div>
+    <div class="dc" style="border-top:3px solid var(--muted);opacity:.6">
+      <h4>Paid Databricks (companies)</h4>
+      <div class="v" style="color:var(--muted)">Clusters — manual setup</div>
+      <p>In real companies, engineers create clusters (dedicated kitchens) with specific sizes and settings. You'll learn this concept but <strong>never need to do it.</strong></p>
+    </div>
+  </div>
+
+  <div class="co"><span class="tag">If a tutorial says "create a cluster"</span>Ignore it. That tutorial was written for the old Community Edition or for paid Databricks. In your Free Edition, compute is serverless — it's already there. If something doesn't run, it's not a cluster problem — it's more likely a typo in the code or a file that hasn't been uploaded yet.</div>
+
+  <div class="co dg" style="border-left-width:4px"><span class="tag">⚠️ Why this matters</span>Half the stress of "learning Databricks" in old tutorials was the cluster step — wait 5 minutes, it fails, try again, wrong runtime version, out of memory. <strong>None of that applies to you.</strong> The Free Edition removed the hardest step. All you do is: open notebook → press ▶ → read the result.</div>
+</section>
+</div>
+
+<!-- ============ PANEL 5: STORAGE ============ -->
+<div class="panel" id="p5">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 5 · Storage (DBFS)</div>
+  <h2>The universal phone charger</h2>
+  <p class="sub">You need to put your data file somewhere Databricks can see it. That somewhere is called DBFS.</p>
+
+  <div class="twin">
+    <div class="ico">🔌</div>
+    <div>
+      <div class="tl">DBFS = one plug that works everywhere.</div>
+      <p>In real companies, data sits on Amazon (AWS), Microsoft (Azure), or Google (GCP). DBFS is a <strong>universal adapter</strong> — you write one file path, and it works no matter which cloud the company uses. You never think about the cloud.</p>
+      <p style="margin-top:6px">For us? It's even simpler: <strong>drag a CSV file into the upload box, and it lands in DBFS.</strong> You'll refer to it as <code style="font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">/FileStore/your_file.csv</code>.</p>
+    </div>
+  </div>
+
+  <div class="dgrid">
+    <div class="dc">
+      <h4>How you upload</h4>
+      <div class="v">Drag and drop</div>
+      <p>Click "Data" in the sidebar → "Add data" → drag your CSV. Done. The file is now at <code style="font-family:var(--mono);font-size:11px">/FileStore/...</code></p>
+    </div>
+    <div class="dc">
+      <h4>How you read it</h4>
+      <div class="v">One line of code</div>
+      <p><code style="font-family:var(--mono);font-size:11px">spark.read.csv("/FileStore/file.csv")</code> — that's it. Already in the notebook for you.</p>
+    </div>
+    <div class="dc">
+      <h4>How big can it be?</h4>
+      <div class="v">Way bigger than Excel</div>
+      <p>Excel dies at a few hundred MB. Databricks handles <strong>gigabytes to terabytes</strong> without sweating.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ============ PANEL 6: WHAT YOU DO ============ -->
+<div class="panel" id="p6">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 6 · What you actually do in the lab</div>
+  <h2>The same four verbs — on a bigger desk</h2>
+  <p class="sub">You already know how to do this. You've done it in Excel. You've done it in SQL. You've done it in Hive. <strong>The verbs never change — only where they run.</strong></p>
+
+  <div class="dgrid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="dc" style="text-align:center;border-top:3px solid var(--orange)">
+      <div class="v" style="font-size:28px">🔍</div>
+      <h4 style="margin-top:4px">Filter</h4>
+      <p>Keep only the rows you care about</p>
+    </div>
+    <div class="dc" style="text-align:center;border-top:3px solid var(--accent2)">
+      <div class="v" style="font-size:28px">📁</div>
+      <h4 style="margin-top:4px;color:var(--accent2)">Group</h4>
+      <p>Put rows into buckets (by region, by hour…)</p>
+    </div>
+    <div class="dc" style="text-align:center;border-top:3px solid var(--success)">
+      <div class="v" style="font-size:28px">➕</div>
+      <h4 style="margin-top:4px;color:var(--success)">Total</h4>
+      <p>Count, sum, or average each bucket</p>
+    </div>
+    <div class="dc" style="text-align:center;border-top:3px solid var(--accent)">
+      <div class="v" style="font-size:28px">↕️</div>
+      <h4 style="margin-top:4px;color:var(--accent)">Sort</h4>
+      <p>Rank by biggest, newest, most popular</p>
+    </div>
+  </div>
+
+  <p class="sub" style="margin:16px 0 8px"><strong>Here's what that looks like in a notebook — with the English translation first:</strong></p>
+
+  <div class="mockup">
+    <div class="mock-bar">
+      <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      <span class="mock-url">QuickKart_Lab.py — "Top pages with errors"</span>
+    </div>
+    <div class="mock-body" style="padding:14px">
+      <div style="background:rgba(232,133,74,.06);border:1px solid rgba(232,133,74,.15);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">📖 Read this — the English version</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.5">"From all 200,000 log entries, <strong>filter</strong> to only server errors (status 500), <strong>group</strong> by page URL, <strong>count</strong> how many errors each page had, and <strong>sort</strong> so the worst page is on top."</div>
+      </div>
+      <div class="cell" style="margin:0">
+        <div class="cell-bar"><span class="cell-type">Python</span><span class="cell-run">✓ ran in 1.8s</span></div>
+        <div class="cell-code" style="opacity:.6">
+          errors = df.<span class="fn">filter</span>(df.status == <span class="s">"500"</span>)  <span class="c"># filter</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;.<span class="fn">groupBy</span>(<span class="s">"url"</span>)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># group</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;.<span class="fn">count</span>()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># total</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;.<span class="fn">orderBy</span>(<span class="s">"count"</span>, ascending=<span class="k">False</span>)  <span class="c"># sort</span><br><br>
+          <span class="fn">display</span>(errors)
+        </div>
+        <div class="cell-out" style="font-size:10px">
+          <table style="width:100%;color:var(--text2);border-collapse:collapse;font-family:var(--mono)">
+            <tr style="color:var(--orange);font-weight:700"><td>url</td><td>count</td></tr>
+            <tr><td>/</td><td>4,137</td></tr>
+            <tr><td>/product/shoes</td><td>1,950</td></tr>
+            <tr><td>/product/laptop</td><td>1,715</td></tr>
+            <tr><td>/cart</td><td>1,408</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="co"><span class="tag">What you do in the lab</span>The notebook is pre-written. You read the English. You press ▶. You see the result. Then you <strong>change one thing</strong> — swap "500" for "404," change the sort order, group by hour instead of page — and press ▶ again. That's the entire exercise. <strong>Change one thing, see what happens.</strong></div>
+</section>
+</div>
+
+<!-- ============ PANEL 7: JARGON KILLER ============ -->
+<div class="panel" id="p7">
+<section class="blk">
+  <div class="eyebrow" style="color:var(--orange)">Step 7 · The jargon killer</div>
+  <h2>Every scary word, translated</h2>
+  <p class="sub">Pin this. Every term you'll hear in the lab, with the thing it actually is.</p>
+
+  <table class="jt">
+    <thead><tr><th>They say</th><th>It actually means</th><th>The twin</th></tr></thead>
+    <tbody>
+      <tr><td>Spark</td><td>The engine that processes your data fast</td><td>🏎️ F1 engine</td></tr>
+      <tr><td>Databricks</td><td>The car built around that engine — what you log into</td><td>🏁 The race car, ready to drive</td></tr>
+      <tr><td>Notebook</td><td>A document with text + runnable code + live results</td><td>📓 Google Docs meets a calculator</td></tr>
+      <tr><td>Cell</td><td>One box in a notebook — holds a note or a piece of code</td><td>📦 One box on the page</td></tr>
+      <tr><td>Cluster</td><td>A dedicated computer for running code (used in paid Databricks)</td><td>🍳 A kitchen you rent — but in the Free Edition, <strong>the kitchen is already built</strong></td></tr>
+      <tr><td>DBFS</td><td>Where your data files live inside Databricks</td><td>🔌 Universal charger — one plug, any cloud</td></tr>
+      <tr><td>DataFrame</td><td>Your data loaded into memory — rows and columns</td><td>📊 A spreadsheet that Spark can touch</td></tr>
+      <tr><td>SparkSession</td><td>The object named <code style="font-family:var(--mono)">spark</code> that you use to do anything</td><td>🏨 Reception desk — already created for you</td></tr>
+      <tr><td>display()</td><td>Show the result as a nice table or chart</td><td>👁️ "Let me see it"</td></tr>
+      <tr><td>.filter()</td><td>Keep only certain rows</td><td>🔍 Same as WHERE in SQL</td></tr>
+      <tr><td>.groupBy()</td><td>Put rows into buckets</td><td>📁 Same as GROUP BY in SQL</td></tr>
+      <tr><td>.count()</td><td>How many in each bucket</td><td>➕ Same as COUNT() in SQL</td></tr>
+      <tr><td>.orderBy()</td><td>Sort the result</td><td>↕️ Same as ORDER BY in SQL</td></tr>
+      <tr><td>Community Edition</td><td>Free version of Databricks for learning</td><td>🆓 Free. No catch. No expiry.</td></tr>
+      <tr><td>Runtime</td><td>The version of Spark + libraries pre-installed on your cluster</td><td>🧰 The toolbox that comes with the kitchen</td></tr>
+      <tr><td>"Detached"</td><td>Your notebook isn't connected to compute yet</td><td>🔌 Charger unplugged — click "Connect" or select Serverless</td></tr>
+    </tbody>
+  </table>
+
+  <div class="co"><span class="tag">The honest truth</span>If you remember <strong>five things</strong> from this page, let them be these: <strong>1.</strong> Databricks runs in your browser. <strong>2.</strong> A notebook = text + code + output in one page. <strong>3.</strong> A cluster = the computer that runs it (start it once). <strong>4.</strong> The four verbs are the same ones you know. <strong>5.</strong> You press ▶ and read the result. Everything else is detail.</div>
+
+  <div class="co ok"><span class="tag">You've got this</span>By the time you open Databricks in the lab, nothing on screen will surprise you. You've already seen the sidebar, the notebook, the cluster, the cells, and the output. The lions are just <strong>large, sleepy cats</strong>. Walk in like you own the place.</div>
+</section>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+(function(){
+  var btns = document.querySelectorAll('.sn-btn');
+  var panels = document.querySelectorAll('.panel');
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btns.forEach(function(b){b.classList.remove('active')});
+      btn.classList.add('active');
+      var t = btn.getAttribute('data-t');
+      panels.forEach(function(p){
+        if(p.id === t){ p.classList.remove('vis'); void p.offsetWidth; p.classList.add('vis'); }
+        else { p.classList.remove('vis'); }
+      });
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+})();
+</script>
+</body>
+</html>

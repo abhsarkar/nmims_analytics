@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why Sin & Cos? — The Clock Problem</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#050A12;--surface:#0A1628;--card:#0F1D32;--gold:#F5A623;--blue:#4A9EFF;--violet:#A78BFA;--amber:#FBBF24;--red:#EF4444;--green:#34D399;--cyan:#22D3EE;--text:#E2E8F0;--muted:#94A3B8;--dim:#475569;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--ink);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden;height:100vh;}
+.slide{display:none;width:100%;height:100vh;flex-direction:column;justify-content:center;align-items:center;padding:36px 48px;}
+.slide.active{display:flex;}
+.tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:12px;color:var(--gold);}
+h2{font-family:'Space Grotesk',sans-serif;font-size:clamp(1.6rem,3.2vw,2.6rem);font-weight:700;line-height:1.15;margin-bottom:18px;}
+.body-text{font-size:clamp(.9rem,1.3vw,1.08rem);color:var(--text);line-height:1.7;max-width:820px;margin-bottom:22px;}
+.punchline{font-family:'Space Grotesk',sans-serif;font-size:clamp(.92rem,1.5vw,1.2rem);font-weight:600;padding:16px 22px;border-radius:8px;display:inline-block;max-width:820px;line-height:1.4;}
+canvas{border-radius:10px;}
+
+/* Number line */
+.numline{display:flex;align-items:flex-end;gap:0;max-width:800px;width:100%;margin:0 auto;}
+.numline .tick{flex:1;display:flex;flex-direction:column;align-items:center;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--dim);position:relative;}
+.numline .tick .bar{width:100%;height:30px;background:var(--surface);border:1px solid var(--dim);border-radius:2px;margin-top:4px;transition:all .3s;}
+.numline .tick.hl .bar{background:var(--gold);border-color:var(--gold);}
+.numline .tick.hl2 .bar{background:var(--cyan);border-color:var(--cyan);}
+.numline .tick.hl{color:var(--gold);}
+.numline .tick.hl2{color:var(--cyan);}
+.gap-label{position:absolute;top:-22px;font-size:.65rem;font-weight:600;}
+
+/* Table */
+.tbl{border-collapse:collapse;font-size:.78rem;max-width:680px;}
+.tbl th{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:1.5px;color:var(--dim);text-align:center;padding:8px 14px;border-bottom:1px solid var(--dim);}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(71,85,105,.2);text-align:center;font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+.tbl tr:hover{background:rgba(245,166,35,.04);}
+
+/* Nav */
+.nav{position:fixed;bottom:22px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:16px;z-index:100;}
+.nav button{background:var(--card);border:1px solid var(--dim);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:8px 20px;border-radius:6px;cursor:pointer;transition:all .2s;}
+.nav button:hover{border-color:var(--gold);color:var(--gold);}
+.nav .counter{font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--dim);min-width:50px;text-align:center;}
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--gold);transition:width .4s ease;z-index:200;}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<!-- S0: THE PROBLEM -->
+<div class="slide active" id="s0">
+  <div style="max-width:860px;width:100%;">
+    <div class="tag">The Problem</div>
+    <h2>Your model thinks <span style="color:var(--gold)">11 PM</span> and <span style="color:var(--cyan)">midnight</span> are far apart.</h2>
+    <div class="body-text">When you feed <code>hour_of_day</code> as a raw number, the model sees this:</div>
+
+    <div class="numline" style="margin-bottom:16px;">
+      <div class="tick hl"><span class="gap-label" style="color:var(--gold);">11 PM</span>0<div class="bar"></div></div>
+      <div class="tick">1<div class="bar"></div></div>
+      <div class="tick">2<div class="bar"></div></div>
+      <div class="tick">3<div class="bar"></div></div>
+      <div class="tick">4<div class="bar"></div></div>
+      <div class="tick">5<div class="bar"></div></div>
+      <div class="tick">6<div class="bar"></div></div>
+      <div class="tick">7<div class="bar"></div></div>
+      <div class="tick">8<div class="bar"></div></div>
+      <div class="tick">9<div class="bar"></div></div>
+      <div class="tick">10<div class="bar"></div></div>
+      <div class="tick">11<div class="bar"></div></div>
+      <div class="tick">12<div class="bar"></div></div>
+      <div class="tick">13<div class="bar"></div></div>
+      <div class="tick">14<div class="bar"></div></div>
+      <div class="tick">15<div class="bar"></div></div>
+      <div class="tick">16<div class="bar"></div></div>
+      <div class="tick">17<div class="bar"></div></div>
+      <div class="tick">18<div class="bar"></div></div>
+      <div class="tick">19<div class="bar"></div></div>
+      <div class="tick">20<div class="bar"></div></div>
+      <div class="tick">21<div class="bar"></div></div>
+      <div class="tick">22<div class="bar"></div></div>
+      <div class="tick hl2"><span class="gap-label" style="color:var(--cyan);">Midnight</span>23<div class="bar"></div></div>
+    </div>
+
+    <div style="display:flex;gap:24px;justify-content:center;margin:20px 0;">
+      <div style="background:var(--card);border-radius:8px;padding:16px 24px;text-align:center;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.9rem;color:var(--muted);">Model sees distance:</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:2.5rem;font-weight:700;color:var(--red);">23 units</div>
+        <div style="font-size:.82rem;color:var(--red);">Maximum possible gap!</div>
+      </div>
+      <div style="background:var(--card);border-radius:8px;padding:16px 24px;text-align:center;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.9rem;color:var(--muted);">Reality:</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:2.5rem;font-weight:700;color:var(--green);">1 hour</div>
+        <div style="font-size:.82rem;color:var(--green);">They're basically neighbors!</div>
+      </div>
+    </div>
+
+    <div class="punchline" style="background:rgba(239,68,68,.08);color:var(--red);">
+      A user who listens at 11:30 PM and another who listens at 12:30 AM have almost identical behavior. But the model treats them as polar opposites.
+    </div>
+  </div>
+</div>
+
+<!-- S1: THE INSIGHT -->
+<div class="slide" id="s1">
+  <div style="max-width:860px;width:100%;text-align:center;">
+    <div class="tag">The Insight</div>
+    <h2>Time is not a <span style="color:var(--red)">line</span>. Time is a <span style="color:var(--gold)">circle</span>.</h2>
+    <div class="body-text" style="margin:0 auto 24px;">After hour 23, it doesn't go to hour 24. It wraps back to hour 0. Just like a clock.</div>
+
+    <div style="display:flex;gap:48px;align-items:center;justify-content:center;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--red);font-size:.9rem;margin-bottom:12px;">❌ How the model sees time</div>
+        <canvas id="lineCanvas" width="320" height="80"></canvas>
+      </div>
+      <div style="font-size:2rem;color:var(--gold);">vs</div>
+      <div style="text-align:center;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--green);font-size:.9rem;margin-bottom:12px;">✅ How time actually works</div>
+        <canvas id="clockCanvas" width="260" height="260"></canvas>
+      </div>
+    </div>
+
+    <div style="height:16px;"></div>
+    <div class="punchline" style="background:rgba(245,166,35,.08);color:var(--gold);">
+      So the question becomes: how do we tell the model that time wraps around?<br>Answer: put each hour on the circle using its x,y coordinates. That's sin and cos.
+    </div>
+  </div>
+</div>
+
+<!-- S2: THE CLOCK = SIN/COS -->
+<div class="slide" id="s2">
+  <div style="max-width:900px;width:100%;">
+    <div class="tag">The Solution</div>
+    <h2>Put every hour on the <span style="color:var(--gold)">clock face</span>. Read its x,y position.</h2>
+    <div class="body-text">Imagine the 24 hours placed on a circle. Each hour has two coordinates — how far right (cos) and how far up (sin). These two numbers together tell the model where on the circle this hour lives.</div>
+
+    <div style="display:flex;gap:40px;align-items:center;justify-content:center;flex-wrap:wrap;">
+      <canvas id="sinCosClockCanvas" width="320" height="320"></canvas>
+      <div style="max-width:400px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--dim);margin-bottom:8px;">FORMULA:</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--gold);line-height:2.2;margin-bottom:16px;">
+          hour_sin = sin(2π × hour / 24)<br>
+          hour_cos = cos(2π × hour / 24)
+        </div>
+        <div style="font-size:.88rem;color:var(--text);line-height:1.7;margin-bottom:16px;">
+          <strong>Why two numbers?</strong> Because sin alone can't tell 6 AM from 6 PM — both give sin = ±1.0. You need both x and y to have a unique point.
+        </div>
+        <div style="font-size:.88rem;color:var(--text);line-height:1.7;">
+          <strong>Everyday analogy:</strong> Telling someone a shop is "2 km away" isn't enough. You need "2 km north, 1 km east" — two numbers for a position on a circle.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3: THE NUMBERS -->
+<div class="slide" id="s3">
+  <div style="max-width:860px;width:100%;">
+    <div class="tag">The Proof</div>
+    <h2>Look at the <span style="color:var(--gold)">actual numbers</span>. Neighbors stay neighbors.</h2>
+
+    <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start;">
+      <table class="tbl">
+        <tr><th>Hour</th><th>Time</th><th style="color:var(--gold)">sin</th><th style="color:var(--cyan)">cos</th></tr>
+        <tr style="background:rgba(245,166,35,.08);"><td style="color:var(--gold);font-weight:700;">0</td><td style="color:var(--gold)">Midnight</td><td>0.000</td><td>1.000</td></tr>
+        <tr><td>1</td><td>1 AM</td><td>0.259</td><td>0.966</td></tr>
+        <tr><td>4</td><td>4 AM</td><td>0.866</td><td>0.500</td></tr>
+        <tr><td>6</td><td>6 AM</td><td>1.000</td><td>0.000</td></tr>
+        <tr><td>8</td><td>8 AM</td><td>0.866</td><td>−0.500</td></tr>
+        <tr><td>12</td><td>Noon</td><td>0.000</td><td>−1.000</td></tr>
+        <tr><td>18</td><td>6 PM</td><td>−1.000</td><td>0.000</td></tr>
+        <tr><td>21</td><td>9 PM</td><td>−0.707</td><td>0.707</td></tr>
+        <tr style="background:rgba(34,211,238,.08);"><td style="color:var(--cyan);font-weight:700;">23</td><td style="color:var(--cyan)">11 PM</td><td>−0.259</td><td>0.966</td></tr>
+      </table>
+
+      <div style="max-width:340px;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1rem;color:var(--green);margin-bottom:12px;">Now check the distances:</div>
+
+        <div style="background:var(--card);border-radius:8px;padding:16px;margin-bottom:10px;">
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px;">Hour 23 → Hour 0 (neighbors in real life)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8;">
+            <div>sin: −0.259 → 0.000 <span style="color:var(--green);">Δ = 0.259</span></div>
+            <div>cos: 0.966 → 1.000 <span style="color:var(--green);">Δ = 0.034</span></div>
+            <div style="color:var(--green);font-weight:600;margin-top:4px;">Distance = 0.261 ✓ Very close!</div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border-radius:8px;padding:16px;margin-bottom:10px;">
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px;">Hour 23 → Hour 12 (far apart in real life)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8;">
+            <div>sin: −0.259 → 0.000 <span style="color:var(--amber);">Δ = 0.259</span></div>
+            <div>cos: 0.966 → −1.000 <span style="color:var(--red);">Δ = 1.966</span></div>
+            <div style="color:var(--red);font-weight:600;margin-top:4px;">Distance = 1.983 ✗ Far!</div>
+          </div>
+        </div>
+
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--gold);font-size:.9rem;margin-top:12px;">The math now matches the reality.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S4: WHY NOT JUST SIN? -->
+<div class="slide" id="s4">
+  <div style="max-width:860px;width:100%;text-align:center;">
+    <div class="tag">Why Both?</div>
+    <h2>Sin alone can't tell <span style="color:var(--gold)">6 AM</span> from <span style="color:var(--cyan)">6 PM</span>.</h2>
+
+    <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+      <canvas id="sinOnlyCanvas" width="400" height="200"></canvas>
+      <canvas id="sinCosCanvas" width="300" height="300"></canvas>
+    </div>
+
+    <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+      <div style="background:var(--card);border-radius:10px;padding:20px;max-width:360px;border:1px solid rgba(239,68,68,.2);">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--red);font-size:.9rem;margin-bottom:6px;">❌ Sin Only</div>
+        <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+          sin(6 AM) = <strong>1.0</strong><br>
+          sin(6 PM) = <strong>−1.0</strong><br>
+          Looks fine? But sin(3 AM) = sin(9 AM) = 0.707. The model sees 3 AM and 9 AM as identical. That's a 6-hour gap!
+        </div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:20px;max-width:360px;border:1px solid rgba(52,211,153,.2);">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--green);font-size:.9rem;margin-bottom:6px;">✅ Sin + Cos Together</div>
+        <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+          3 AM = (sin: 0.707, cos: <strong>0.707</strong>)<br>
+          9 AM = (sin: 0.707, cos: <strong>−0.707</strong>)<br>
+          Now they're different! Every hour gets a <em>unique point</em> on the circle. No ambiguity.
+        </div>
+      </div>
+    </div>
+
+    <div class="punchline" style="background:rgba(245,166,35,.08);color:var(--gold);">
+      One number (sin) gives you the wave. Two numbers (sin + cos) give you the circle. You need the circle.
+    </div>
+  </div>
+</div>
+
+<!-- S5: WHERE ELSE THIS WORKS -->
+<div class="slide" id="s5">
+  <div style="max-width:860px;width:100%;">
+    <div class="tag">Beyond Hours</div>
+    <h2>This trick works for <span style="color:var(--gold)">anything that wraps around</span>.</h2>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--gold);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">🕐</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">Hour of Day</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Period = 24. Late-night listeners wrap around midnight.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:6px;">sin(2π × h/24)</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--blue);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">📅</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">Day of Week</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Period = 7. Sunday and Monday are neighbors, not 6 apart.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:6px;">sin(2π × d/7)</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--green);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">🗓️</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">Month of Year</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Period = 12. December and January are neighbors. Seasonality wraps.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:6px;">sin(2π × m/12)</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--violet);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">🧭</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">Wind Direction</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Period = 360°. Wind at 359° and 1° blow almost the same way.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:6px;">sin(2π × deg/360)</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--amber);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">🎵</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">Musical Key</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Period = 12 semitones. C and B are one semitone apart on the circle of fifths.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:6px;">sin(2π × key/12)</div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:22px 20px;width:230px;border-top:3px solid var(--cyan);">
+        <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;margin-bottom:4px;">The Formula</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">For anything with period P:</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--gold);margin-top:6px;line-height:1.8;">
+          x_sin = sin(2π × value / P)<br>x_cos = cos(2π × value / P)
+        </div>
+      </div>
+    </div>
+
+    <div class="punchline" style="background:rgba(245,166,35,.08);color:var(--gold);">
+      The rule: if it wraps around, encode it on a circle. One column becomes two — but the model finally understands that the end connects to the beginning.
+    </div>
+  </div>
+</div>
+
+<!-- S6: SAAVN IMPACT -->
+<div class="slide" id="s6">
+  <div style="max-width:860px;width:100%;text-align:center;">
+    <div class="tag">Why This Matters at Saavn</div>
+    <h2>Without cyclical encoding, your model has a <span style="color:var(--red)">blind spot</span> around midnight.</h2>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
+      <div style="background:var(--card);border-radius:10px;padding:24px;flex:1;min-width:320px;border:1px solid rgba(239,68,68,.2);">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--red);font-size:1rem;margin-bottom:12px;">❌ Raw hour = 0, 1, 2, ... 23</div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.7;">
+          Model thinks a user at <strong>11 PM</strong> is maximally different from a user at <strong>midnight</strong>. So it builds completely different recommendation strategies for them.
+        </div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-top:10px;">
+          Result: <span style="color:var(--red);">The lo-fi chill playlist that works perfectly at 11:30 PM suddenly stops being recommended at 12:01 AM.</span> The user skips. Engagement drops. Revenue falls.
+        </div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:24px;flex:1;min-width:320px;border:1px solid rgba(52,211,153,.2);">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--green);font-size:1rem;margin-bottom:12px;">✅ sin(hour), cos(hour)</div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.7;">
+          Model sees 11 PM and midnight as <strong>0.26 units apart</strong> — nearly identical. It builds one smooth recommendation strategy that transitions naturally through the night.
+        </div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-top:10px;">
+          Result: <span style="color:var(--green);">The lo-fi playlist flows seamlessly from 11 PM to 1 AM. User stays in the zone. Session length increases. Churn decreases.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border-radius:10px;padding:20px;max-width:600px;margin:0 auto;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--gold);font-size:1.2rem;margin-bottom:6px;">The one-liner:</div>
+      <div style="font-size:1rem;color:var(--text);">Don't tell the model what time it is. Tell it <em>where on the clock</em> it is.</div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button onclick="go(-1)">← Prev</button>
+  <div class="counter" id="counter"></div>
+  <button onclick="go(1)">Next →</button>
+</div>
+
+<script>
+let cur=0;const tot=7;
+function show(n){
+  document.querySelectorAll('.slide').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  document.getElementById('counter').textContent=n+'/'+(tot-1);
+  document.getElementById('progress').style.width=((n/(tot-1))*100)+'%';
+  if(n===1){drawLine();drawClock();}
+  if(n===2)drawSinCosClock();
+  if(n===4){drawSinOnly();drawSinCos2D();}
+}
+function go(d){cur=Math.max(0,Math.min(tot-1,cur+d));show(cur);}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(1);}if(e.key==='ArrowLeft'){e.preventDefault();go(-1);}});
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)go(d<0?1:-1);});
+
+// DRAW: Number line
+function drawLine(){
+  const c=document.getElementById('lineCanvas');if(!c)return;const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#475569';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(10,40);ctx.lineTo(310,40);ctx.stroke();
+  for(let i=0;i<24;i++){
+    const x=10+i*(300/23);
+    ctx.strokeStyle=(i===0)?'#F5A623':(i===23)?'#22D3EE':'#475569';
+    ctx.lineWidth=(i===0||i===23)?3:1;
+    ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,50);ctx.stroke();
+  }
+  ctx.fillStyle='#F5A623';ctx.font='bold 11px "Space Grotesk"';ctx.fillText('0',6,68);
+  ctx.fillStyle='#22D3EE';ctx.fillText('23',296,68);
+  // Gap arrow
+  ctx.strokeStyle='#EF4444';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(14,25);ctx.lineTo(306,25);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#EF4444';ctx.font='10px "JetBrains Mono"';ctx.fillText('23 units apart!',120,18);
+}
+
+// DRAW: Clock
+function drawClock(){
+  const c=document.getElementById('clockCanvas');if(!c)return;const ctx=c.getContext('2d');
+  const cx=130,cy=130,r=105;
+  ctx.clearRect(0,0,c.width,c.height);
+  // Circle
+  ctx.strokeStyle='#475569';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  // Hour marks
+  for(let h=0;h<24;h++){
+    const angle=(h/24)*Math.PI*2 - Math.PI/2;
+    const x1=cx+Math.cos(angle)*(r-8), y1=cy+Math.sin(angle)*(r-8);
+    const x2=cx+Math.cos(angle)*(r+2), y2=cy+Math.sin(angle)*(r+2);
+    const isHL=(h===0||h===23);
+    ctx.strokeStyle=isHL?(h===0?'#F5A623':'#22D3EE'):'#475569';
+    ctx.lineWidth=isHL?3:1;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    if(h%6===0||isHL){
+      const lx=cx+Math.cos(angle)*(r+16), ly=cy+Math.sin(angle)*(r+16);
+      ctx.fillStyle=isHL?(h===0?'#F5A623':'#22D3EE'):'#94A3B8';
+      ctx.font=isHL?'bold 11px "Space Grotesk"':'9px "JetBrains Mono"';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(h.toString(),lx,ly);
+    }
+  }
+  // Dots for 0 and 23
+  const a0=(0/24)*Math.PI*2-Math.PI/2;
+  const a23=(23/24)*Math.PI*2-Math.PI/2;
+  ctx.fillStyle='#F5A623';ctx.beginPath();ctx.arc(cx+Math.cos(a0)*r,cy+Math.sin(a0)*r,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#22D3EE';ctx.beginPath();ctx.arc(cx+Math.cos(a23)*r,cy+Math.sin(a23)*r,6,0,Math.PI*2);ctx.fill();
+  // Arc between them
+  ctx.strokeStyle='#34D399';ctx.lineWidth=3;ctx.setLineDash([5,3]);
+  ctx.beginPath();ctx.arc(cx,cy,r-20,a23,a0+Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#34D399';ctx.font='bold 10px "Space Grotesk"';ctx.textAlign='center';
+  ctx.fillText('1 hour!',cx+r-30,cy-r+25);
+}
+
+// DRAW: Sin/Cos Clock with coordinates
+function drawSinCosClock(){
+  const c=document.getElementById('sinCosClockCanvas');if(!c)return;const ctx=c.getContext('2d');
+  const cx=160,cy=160,r=120;
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  // Axes
+  ctx.beginPath();ctx.moveTo(cx-r-20,cy);ctx.lineTo(cx+r+20,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-r-20);ctx.lineTo(cx,cy+r+20);ctx.stroke();
+  ctx.fillStyle='#94A3B8';ctx.font='9px "JetBrains Mono"';ctx.textAlign='center';
+  ctx.fillText('cos →',cx+r+10,cy+14);
+  ctx.fillText('↑ sin',cx+18,cy-r-8);
+  // Circle
+  ctx.strokeStyle='rgba(245,166,35,.2)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  // Hours
+  const highlights={0:'#F5A623',6:'#34D399',12:'#4A9EFF',18:'#A78BFA',23:'#22D3EE'};
+  for(let h=0;h<24;h++){
+    const angle=(h/24)*Math.PI*2 - Math.PI/2;
+    const x=cx+Math.cos(angle)*r, y=cy+Math.sin(angle)*r;
+    const col=highlights[h]||'#475569';
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(x,y,highlights[h]?6:3,0,Math.PI*2);ctx.fill();
+    if(highlights[h]){
+      const lx=cx+Math.cos(angle)*(r+22), ly=cy+Math.sin(angle)*(r+22);
+      ctx.font='bold 10px "Space Grotesk"';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(h+'h',lx,ly);
+    }
+  }
+  // Dashed lines from 0h to axes
+  const a0=(0/24)*Math.PI*2-Math.PI/2;
+  const x0=cx+Math.cos(a0)*r, y0=cy+Math.sin(a0)*r;
+  ctx.strokeStyle='#F5A623';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0,cy);ctx.stroke(); // to x-axis
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(cx,y0);ctx.stroke(); // to y-axis
+  ctx.setLineDash([]);
+  ctx.fillStyle='#F5A623';ctx.font='9px "JetBrains Mono"';
+  ctx.fillText('cos=1.0',x0,cy+14);ctx.fillText('sin=0.0',cx-28,y0);
+}
+
+// DRAW: Sin only wave
+function drawSinOnly(){
+  const c=document.getElementById('sinOnlyCanvas');if(!c)return;const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(30,100);ctx.lineTo(380,100);ctx.stroke(); // x-axis
+  ctx.beginPath();ctx.moveTo(30,10);ctx.lineTo(30,190);ctx.stroke(); // y-axis
+  // Labels
+  ctx.fillStyle='#94A3B8';ctx.font='9px "JetBrains Mono"';ctx.textAlign='center';
+  for(let h=0;h<=24;h+=6){ctx.fillText(h+'h',30+h*(350/24),115);}
+  ctx.textAlign='right';ctx.fillText('1.0',26,18);ctx.fillText('-1.0',26,192);ctx.fillText('0',26,103);
+  // Sin wave
+  ctx.strokeStyle='#F5A623';ctx.lineWidth=2.5;ctx.beginPath();
+  for(let h=0;h<=24;h+=0.1){
+    const x=30+h*(350/24);
+    const y=100-Math.sin(2*Math.PI*h/24)*80;
+    h===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  // Problem: 3AM and 9AM have same sin
+  const x3=30+3*(350/24), x9=30+9*(350/24);
+  const y3=100-Math.sin(2*Math.PI*3/24)*80, y9=100-Math.sin(2*Math.PI*9/24)*80;
+  ctx.fillStyle='#EF4444';ctx.beginPath();ctx.arc(x3,y3,6,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x9,y9,6,0,Math.PI*2);ctx.fill();
+  ctx.setLineDash([4,3]);ctx.strokeStyle='#EF4444';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x3,y3);ctx.lineTo(x9,y9);ctx.stroke();ctx.setLineDash([]);
+  ctx.font='bold 9px "Space Grotesk"';ctx.textAlign='center';
+  ctx.fillText('3AM',x3,y3-12);ctx.fillText('9AM',x9,y9-12);
+  ctx.fillText('Same sin!',((x3+x9)/2),y3-24);
+  ctx.fillStyle='#EF4444';ctx.font='bold 11px "Space Grotesk"';
+  ctx.fillText('❌ Sin alone: 3AM = 9AM',200,188);
+}
+
+// DRAW: Sin+Cos 2D scatter
+function drawSinCos2D(){
+  const c=document.getElementById('sinCosCanvas');if(!c)return;const ctx=c.getContext('2d');
+  const cx=150,cy=150,r=110;
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx-r-20,cy);ctx.lineTo(cx+r+20,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-r-20);ctx.lineTo(cx,cy+r+20);ctx.stroke();
+  ctx.fillStyle='#94A3B8';ctx.font='9px "JetBrains Mono"';ctx.textAlign='center';
+  ctx.fillText('cos',cx+r+15,cy+14);ctx.fillText('sin',cx+12,cy-r-8);
+  ctx.strokeStyle='rgba(52,211,153,.15)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  for(let h=0;h<24;h++){
+    const a=(h/24)*Math.PI*2-Math.PI/2;
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    const is3=(h===3),is9=(h===9);
+    ctx.fillStyle=is3?'#34D399':is9?'#4A9EFF':'#475569';
+    ctx.beginPath();ctx.arc(x,y,(is3||is9)?7:3,0,Math.PI*2);ctx.fill();
+    if(is3||is9){
+      ctx.font='bold 10px "Space Grotesk"';ctx.textAlign='center';
+      ctx.fillText(h+'AM',x+(is3?14:-14),y-12);
+    }
+  }
+  ctx.fillStyle='#34D399';ctx.font='bold 11px "Space Grotesk"';ctx.textAlign='center';
+  ctx.fillText('✅ Now 3AM ≠ 9AM',150,290);
+}
+
+show(0);
+</script>
+</body>
+</html>

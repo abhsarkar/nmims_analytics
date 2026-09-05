@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hive — Asking Questions of Files Too Big to Open</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08111F; --bg2:#0F1E33; --card:#14263D; --border:#233A56;
+    --text:#F4F8FC; --text2:#A8B8CC; --muted:#70849A;
+    --accent:#3BA5E7; --accent2:#F0B44D; --success:#39B87F; --warning:#F0B44D; --danger:#E35B5B;
+    --r-sm:10px; --r-md:16px; --pad:clamp(24px,4vw,64px); --gap:20px;
+    --shadow:0 18px 50px -20px rgba(0,0,0,.65);
+    --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:var(--font);background:radial-gradient(1200px 700px at 80% -10%, #173252 0%, #08111F 55%, #050A12 100%);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;overflow:hidden}
+  .deck{position:fixed;inset:0}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:var(--pad);opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .5s cubic-bezier(.22,.61,.36,1),transform .5s cubic-bezier(.22,.61,.36,1),visibility 0s linear .5s;overflow:hidden}
+  .slide.active{opacity:1;visibility:visible;transform:translateY(0);transition-delay:0s}
+  .slide-inner{width:100%;max-width:1200px;margin:0 auto}
+  .slide.active .reveal{animation:rise .55s cubic-bezier(.22,.61,.36,1) both}
+  .slide.active .reveal:nth-child(2){animation-delay:.05s}
+  .slide.active .reveal:nth-child(3){animation-delay:.1s}
+  .slide.active .reveal:nth-child(4){animation-delay:.15s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .eyebrow{font-size:clamp(10px,1vw,12.5px);text-transform:uppercase;letter-spacing:.25em;font-weight:700;color:var(--accent);margin-bottom:14px}
+  .eyebrow .sep{color:var(--muted);margin:0 .5em;font-weight:500}
+  h2.title{font-weight:800;font-size:clamp(23px,3vw,36px);line-height:1.08;letter-spacing:-.02em;margin-bottom:12px}
+  .lede{font-weight:400;font-size:clamp(15px,1.45vw,20px);line-height:1.5;color:var(--text2);max-width:64ch;margin-bottom:20px}
+  strong,.b{font-weight:700;color:var(--text)}
+  .accent{color:var(--accent)} .gold{color:var(--accent2)} .danger{color:var(--danger)} .ok{color:var(--success)}
+  ul.clean{list-style:none;display:flex;flex-direction:column;gap:11px;max-width:70ch}
+  ul.clean li{position:relative;padding-left:24px;font-size:clamp(14px,1.35vw,17px);line-height:1.45;color:var(--text2)}
+  ul.clean li::before{content:"";position:absolute;left:2px;top:.5em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  ul.clean li strong{color:var(--text)}
+  .grid{display:grid;gap:var(--gap)}
+  .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  .col-6-4{grid-template-columns:1.5fr 1fr} .col-4-6{grid-template-columns:1fr 1.4fr}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:20px 22px;box-shadow:var(--shadow)}
+  .card h3{font-size:clamp(12px,1.15vw,14.5px);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  .card.gold h3{color:var(--accent2)} .card.ok h3{color:var(--success)} .card.warn h3{color:var(--danger)}
+  .card p{font-size:clamp(12.5px,1.2vw,15px);color:var(--text2);line-height:1.45}
+  .card .big{font-size:clamp(20px,2.4vw,30px);font-weight:800;letter-spacing:-.01em;line-height:1.1;margin-bottom:8px;color:var(--text)}
+  .card .num{font-size:clamp(26px,3.4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--accent)}
+  .card .num.gold{color:var(--accent2)} .card .num.ok{color:var(--success)} .card .num.danger{color:var(--danger)}
+  .card .sub{font-size:12.5px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.08em}
+  .twin{font-style:italic;color:var(--text);font-size:clamp(14px,1.4vw,18px);line-height:1.45;margin-bottom:12px}
+  .callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r-md);padding:16px 22px;box-shadow:var(--shadow);font-size:clamp(13px,1.3vw,16.5px);line-height:1.5;color:var(--text2)}
+  .callout .tag{display:block;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-bottom:6px}
+  .callout.gold{border-left-color:var(--accent2)} .callout.gold .tag{color:var(--accent2)}
+  .callout.ok{border-left-color:var(--success)} .callout.ok .tag{color:var(--success)}
+  .callout strong{color:var(--text)}
+  table.t{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:var(--r-md);border:1px solid var(--border);box-shadow:var(--shadow)}
+  table.t th{background:var(--bg2);color:var(--text);font-weight:700;text-align:left;padding:11px 18px;font-size:clamp(12px,1.15vw,15px);border-bottom:2px solid var(--accent)}
+  table.t th.r,table.t td.r{text-align:right}
+  table.t td{padding:10px 18px;font-size:clamp(12px,1.15vw,14.5px);color:var(--text2);border-bottom:1px solid var(--border);vertical-align:middle}
+  table.t tr:last-child td{border-bottom:none}
+  table.t tbody tr:nth-child(odd){background:rgba(255,255,255,.015)}
+  table.t td.h{color:var(--text);font-weight:600}
+  table.t td.mono,table.t th.mono{font-family:var(--mono);font-size:.94em}
+  .bar-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .bar-lab{width:130px;font-size:13px;color:var(--text2);font-family:var(--mono);flex-shrink:0}
+  .bar-track{flex:1;height:22px;background:rgba(255,255,255,.04);border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#2b7fb8);border-radius:6px}
+  .bar-val{width:64px;text-align:right;font-size:13px;color:var(--text);font-weight:600;flex-shrink:0}
+  pre.code{background:#0A1524;border:1px solid var(--border);border-radius:var(--r-md);padding:16px 20px;font-family:var(--mono);font-size:clamp(11.5px,1.05vw,14px);line-height:1.55;color:#DCE7F2;overflow:auto;box-shadow:var(--shadow)}
+  pre.code .c{color:var(--muted)} pre.code .k{color:var(--accent2)} pre.code .s{color:var(--success)} pre.code .fn{color:var(--accent)}
+  .code-faded{opacity:.66}
+  .code-label{display:inline-block;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:4px 11px;border-radius:999px;margin-bottom:8px;background:rgba(59,165,231,.14);color:var(--accent)}
+  .slide--divider .slide-inner{max-width:1000px}
+  .slide--divider .eyebrow{margin-bottom:24px}
+  .divider-title{font-weight:800;font-size:clamp(34px,6vw,80px);line-height:1.0;letter-spacing:-.03em;margin-bottom:22px}
+  .divider-sub{font-weight:400;font-size:clamp(15px,1.7vw,22px);color:var(--text2);max-width:56ch;line-height:1.5}
+  .plain{font-size:clamp(14px,1.45vw,18px);color:var(--text);font-weight:600;line-height:1.4;margin-bottom:10px}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .flow .step{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 10px;text-align:center;font-weight:600;font-size:clamp(11px,1.05vw,13.5px);display:flex;align-items:center;justify-content:center;color:var(--text2)}
+  .flow .arrow{display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:17px;padding:0 8px;font-weight:700}
+  .mt{margin-top:18px}.mt-s{margin-top:12px}.mt-l{margin-top:26px}
+  .subtle{color:var(--muted)}
+  .footer{position:fixed;bottom:18px;left:var(--pad);right:var(--pad);display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;pointer-events:none;z-index:20}
+  .footer .num b{color:var(--accent);font-weight:700}
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:30;transition:width .4s ease}
+  .nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:25}
+  .nav button{width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .nav button:hover{border-color:var(--accent);color:var(--accent)}
+  @media (max-width:720px){.g2,.g3,.g4,.col-6-4,.col-4-6{grid-template-columns:1fr}.flow{flex-direction:column}.flow .arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide slide--divider active">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Big Data Analytics<span class="sep">·</span>Session 7<span class="sep">·</span>Hands-on: Hive</div>
+      <h1 class="divider-title reveal">Asking questions of<br>files too big to open</h1>
+      <p class="divider-sub reveal">Apache <span class="accent">Hive</span> lets you ask <strong>ordinary SQL questions</strong> of data far larger than a spreadsheet — without learning anything new if you've seen SQL before. Case study: analysing a <strong>200,000-line</strong> web server log.</p>
+    </div>
+  </section>
+
+  <!-- 2 · RECAP BRIDGE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Where we are</div>
+      <h2 class="title reveal">Last time the spreadsheet broke. Today: a friendlier fix.</h2>
+      <p class="lede reveal">When data got <strong>too big</strong>, we met Pig — a team of machines splitting the work. Pig is powerful, but it's a step-by-step scripting language. Today's tool asks for the answer a different way.</p>
+      <div class="callout gold mt reveal"><span class="tag">The good news for this room</span>Hive speaks <strong>SQL</strong>. If you've ever written <span style="font-family:var(--mono)">SELECT … WHERE …</span>, you already know most of Hive. You describe <em>what you want</em>, not the steps to get it.</div>
+    </div>
+  </section>
+
+  <!-- 3 · THE TWIN -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The everyday twin</div>
+      <h2 class="title reveal">Hive = SQL for a warehouse of files</h2>
+      <div class="twin reveal mt-s">Think of a normal database as a filing cabinet where everything was carefully typed in and sorted. Hive is different: you point it at a <strong>pile of files you already have</strong> — and it lets you ask them database questions.</div>
+      <div class="grid g3 mt reveal">
+        <div class="card"><h3>Built by</h3><p>Facebook, to let analysts query Hadoop without writing Java. Now an Apache project.</p></div>
+        <div class="card"><h3>The language</h3><p><strong>HiveQL</strong> — SQL with tiny differences. Tables, rows, columns, <span style="font-family:var(--mono)">SELECT</span>, <span style="font-family:var(--mono)">JOIN</span>, <span style="font-family:var(--mono)">GROUP BY</span>.</p></div>
+        <div class="card"><h3>Underneath</h3><p>Hive turns your SQL into a big-data job (MapReduce / Tez / Spark) and runs it across the files.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · SCHEMA ON READ -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The one idea that makes Hive click</div>
+      <h2 class="title reveal">You don't load the data. You label it.</h2>
+      <div class="grid g2 mt reveal">
+        <div class="card warn">
+          <h3>Normal database — “schema on write”</h3>
+          <p>Before you can ask anything, you must <strong>re-type all the data into the database</strong> in its exact format. Slow, and you fix the shape up front.</p>
+          <div class="twin mt-s" style="font-size:15px">Like emptying every document into a new cabinet, retyped and sorted, before you're allowed to look.</div>
+        </div>
+        <div class="card ok">
+          <h3>Hive — “schema on read”</h3>
+          <p>The files already exist. You just <strong>lay a table shape on top of them</strong> and start asking. Nothing is copied or reloaded.</p>
+          <div class="twin mt-s" style="font-size:15px">Like sticking labelled tabs onto a filing cabinet you already own — instantly searchable, nothing retyped.</div>
+        </div>
+      </div>
+      <div class="callout mt reveal"><span class="tag">Say it once, remember it all session</span>Hive attaches a <strong>table shape</strong> to files that already exist. The data stays put; Hive holds only the <strong>description</strong> — like a table of contents, not the book.</div>
+    </div>
+  </section>
+
+  <!-- 5 · THE DATA (REAL SAMPLE) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Our data · the case study</div>
+      <h2 class="title reveal">A web server's log — 200,000 requests</h2>
+      <div class="twin reveal mt-s">Every website keeps a logbook: <strong>one line for every visitor request</strong> — like a shop's CCTV log of who came in, when, and what they looked at.</div>
+      <div class="code-faded reveal mt-s">
+        <span class="code-label">One raw log line</span>
+        <pre class="code">203.0.113.5 <span class="c">- -</span> [11/Oct/2025:13:55:36 +0530] <span class="s">"GET /product/shoes HTTP/1.1"</span> 200 5324 <span class="s">"-" "…iPhone…"</span></pre>
+      </div>
+      <table class="t reveal mt-s">
+        <thead><tr><th class="mono">ip</th><th class="mono">log_time</th><th class="mono">method</th><th class="mono">page</th><th class="mono r">status</th><th class="mono r">bytes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">203.0.113.164</td><td class="mono">11/Oct/2025:04:03:12</td><td class="mono">GET</td><td class="mono">/</td><td class="mono r">200</td><td class="mono r">2079</td></tr>
+          <tr><td class="mono">203.0.113.5</td><td class="mono">11/Oct/2025:13:55:36</td><td class="mono">GET</td><td class="mono">/product/shoes</td><td class="mono r">200</td><td class="mono r">5324</td></tr>
+          <tr><td class="mono">203.0.113.88</td><td class="mono">11/Oct/2025:09:12:41</td><td class="mono">POST</td><td class="mono">/checkout</td><td class="mono r">500</td><td class="mono r">412</td></tr>
+          <tr><td class="mono">203.0.113.201</td><td class="mono">11/Oct/2025:18:44:07</td><td class="mono">GET</td><td class="mono">/offers</td><td class="mono r">404</td><td class="mono r">288</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 · HIVEQL = SQL + REAL RESULT -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The language</div>
+      <h2 class="title reveal">HiveQL is just SQL — read it, don't fear it</h2>
+      <p class="plain reveal">In plain English: <span class="accent">“Count the visits to each page, busiest first.”</span></p>
+      <div class="grid col-4-6 mt-s reveal">
+        <div class="code-faded">
+          <span class="code-label">HiveQL · read, don't memorise</span>
+          <pre class="code"><span class="k">SELECT</span> page, <span class="fn">COUNT</span>(*) <span class="k">AS</span> hits
+<span class="k">FROM</span>   access_logs
+<span class="k">GROUP BY</span> page
+<span class="k">ORDER BY</span> hits <span class="k">DESC</span>
+<span class="k">LIMIT</span> 5;</pre>
+        </div>
+        <div>
+          <table class="t">
+            <thead><tr><th class="mono">page</th><th class="mono r">hits</th></tr></thead>
+            <tbody>
+              <tr><td class="mono h">/</td><td class="mono r">60,302</td></tr>
+              <tr><td class="mono">/product/shoes</td><td class="mono r">27,840</td></tr>
+              <tr><td class="mono">/product/laptop</td><td class="mono r">23,898</td></tr>
+              <tr><td class="mono">/cart</td><td class="mono r">20,057</td></tr>
+              <tr><td class="mono">/search</td><td class="mono r">18,126</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="callout ok mt reveal"><span class="tag">The reassurance</span>Same four moves you already do in Excel — <strong>filter, group, total, sort</strong>. Only now over 200,000 rows a spreadsheet would choke on.</div>
+    </div>
+  </section>
+
+  <!-- 7 · RESULT: STATUS / ERRORS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Real result · question 2</div>
+      <h2 class="title reveal">“Is anything broken?” — status codes</h2>
+      <div class="grid col-4-6 mt reveal">
+        <div>
+          <table class="t">
+            <thead><tr><th class="mono">status</th><th class="mono r">requests</th><th class="mono r">share</th></tr></thead>
+            <tbody>
+              <tr><td class="mono ok">200 · OK</td><td class="mono r">179,922</td><td class="mono r">90.0%</td></tr>
+              <tr><td class="mono">302 · redirect</td><td class="mono r">5,890</td><td class="mono r">2.9%</td></tr>
+              <tr><td class="mono danger">404 · missing</td><td class="mono r">10,047</td><td class="mono r">5.0%</td></tr>
+              <tr><td class="mono danger">500 · broken</td><td class="mono r">4,141</td><td class="mono r">2.1%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card warn">
+          <h3>What a manager reads here</h3>
+          <p class="mt-s"><strong class="danger">7% of all requests failed</strong> (404 + 500) — roughly <strong>1 in 14 visitors</strong> hitting a wall.</p>
+          <p class="mt-s">On an e-commerce site that's lost carts and lost revenue — and the next slide shows <em>exactly which pages</em> to fix first.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · RESULT: ERROR HOTSPOTS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Real result · question 3</div>
+      <h2 class="title reveal">“Which pages break the most?”</h2>
+      <p class="lede reveal">Two ideas combined — <strong>filter</strong> to error rows (<span style="font-family:var(--mono)">WHERE status IN (404,500)</span>), then <strong>group</strong> by page.</p>
+      <div class="reveal mt-s">
+        <div class="bar-row"><div class="bar-lab">/</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">4,137</div></div>
+        <div class="bar-row"><div class="bar-lab">/product/shoes</div><div class="bar-track"><div class="bar-fill" style="width:47%"></div></div><div class="bar-val">1,950</div></div>
+        <div class="bar-row"><div class="bar-lab">/product/laptop</div><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div><div class="bar-val">1,715</div></div>
+        <div class="bar-row"><div class="bar-lab">/cart</div><div class="bar-track"><div class="bar-fill" style="width:34%"></div></div><div class="bar-val">1,408</div></div>
+        <div class="bar-row"><div class="bar-lab">/search</div><div class="bar-track"><div class="bar-fill" style="width:31%"></div></div><div class="bar-val">1,303</div></div>
+      </div>
+      <div class="callout gold mt reveal"><span class="tag">Decision</span>Errors on <strong>/cart</strong> hurt most — a broken cart is an abandoned purchase. One query tells the engineering team where to look on Monday.</div>
+    </div>
+  </section>
+
+  <!-- 9 · RESULT: PEAK HOURS + BANDWIDTH -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Real result · questions 4 &amp; 5</div>
+      <h2 class="title reveal">“When are we busiest, and how much do we serve?”</h2>
+      <div class="grid col-6-4 mt reveal">
+        <div>
+          <div class="card" style="padding:18px 20px">
+            <h3>Requests by hour (sample)</h3>
+            <div class="mt-s">
+              <div class="bar-row"><div class="bar-lab" style="width:56px">00:00</div><div class="bar-track"><div class="bar-fill" style="width:98%"></div></div><div class="bar-val">8,279</div></div>
+              <div class="bar-row"><div class="bar-lab" style="width:56px">09:00</div><div class="bar-track"><div class="bar-fill" style="width:99%"></div></div><div class="bar-val">8,413</div></div>
+              <div class="bar-row"><div class="bar-lab" style="width:56px">17:00</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,var(--accent2),#c98f2e)"></div></div><div class="bar-val">8,464</div></div>
+              <div class="bar-row"><div class="bar-lab" style="width:56px">21:00</div><div class="bar-track"><div class="bar-fill" style="width:98%"></div></div><div class="bar-val">8,261</div></div>
+            </div>
+            <p style="color:var(--muted);font-size:12px;margin-top:6px">Peak 17:00 · traffic is flat → staff evenly, watch the 5–6 pm ridge</p>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card"><div class="num gold">806 MB</div><div class="sub">served to successful visitors</div></div>
+          <div class="card"><div class="num">4,700</div><div class="sub">avg bytes / request</div></div>
+        </div>
+      </div>
+      <div class="callout mt reveal">These two numbers drive very different meetings — one is a <strong>staffing</strong> call, the other an <strong>infrastructure-cost</strong> call. Both come from one log, in SQL.</div>
+    </div>
+  </section>
+
+  <!-- 10 · PIG VS HIVE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Choosing your tool</div>
+      <h2 class="title reveal">Pig vs. Hive — same cluster, different feel</h2>
+      <table class="t reveal mt-s">
+        <thead><tr><th>&nbsp;</th><th>Pig</th><th>Hive</th></tr></thead>
+        <tbody>
+          <tr><td class="h">Language</td><td>Pig Latin — <strong>procedural</strong>, step by step</td><td class="h" style="color:var(--success)">HiveQL — <strong>declarative</strong> SQL</td></tr>
+          <tr><td class="h">You write</td><td>A pipeline of instructions</td><td class="h" style="color:var(--success)">A database query (the goal)</td></tr>
+          <tr><td class="h">Best for</td><td>Messy ETL pipelines · programmers</td><td class="h" style="color:var(--success)">Reporting &amp; analysis · analysts</td></tr>
+          <tr><td class="h">Data</td><td>Structured, semi- &amp; unstructured</td><td>Mostly structured / tabular</td></tr>
+          <tr><td class="h">Schema</td><td>Optional</td><td>Defined, but on <strong>read</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="callout ok mt reveal"><span class="tag">For this room</span>If anyone knows SQL, <strong>Hive lands faster than Pig</strong> — which is why the hands-on lab is in Hive.</div>
+    </div>
+  </section>
+
+  <!-- 11 · HIVE VS RDBMS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">A common confusion</div>
+      <h2 class="title reveal">“Isn't this just a database?” — no</h2>
+      <table class="t reveal mt-s">
+        <thead><tr><th>&nbsp;</th><th>Normal database (RDBMS)</th><th>Hive</th></tr></thead>
+        <tbody>
+          <tr><td class="h">Schema</td><td>On <strong>write</strong> — shape before loading</td><td class="h">On <strong>read</strong> — shape files that exist</td></tr>
+          <tr><td class="h">Scale</td><td>Terabytes</td><td class="h">Petabytes</td></tr>
+          <tr><td class="h">Pattern</td><td>Read &amp; write constantly, live</td><td class="h">Write once, read many times</td></tr>
+          <tr><td class="h">Speed</td><td>Instant, real-time lookups</td><td>Batch — big scans, higher latency</td></tr>
+          <tr><td class="h">Made for</td><td>Running the business (transactions)</td><td class="h">Understanding the business (analysis)</td></tr>
+        </tbody>
+      </table>
+      <div class="callout mt reveal">Hive is a <strong>data warehouse for analysis</strong>, not a live transaction system. It answers big questions over history — not “what's in cart #7 right now.”</div>
+    </div>
+  </section>
+
+  <!-- 12 · ARCHITECTURE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Under the hood · detail</div>
+      <h2 class="title reveal">Hive's architecture, in plain parts</h2>
+      <div class="grid g3 mt reveal">
+        <div class="card"><h3>Clients — how you connect</h3><p><strong>CLI</strong> (command line), <strong>Web UI</strong>, and <strong>JDBC / ODBC / Thrift</strong> drivers so tools like Tableau or a Java app can talk to Hive.</p></div>
+        <div class="card gold"><h3>Metastore — the catalogue</h3><p>Remembers every table's <strong>shape</strong>: names, columns, types, and where the files live. The description only — never the data.</p></div>
+        <div class="card ok"><h3>Driver → Compiler → Engine</h3><p>The <strong>Driver</strong> takes your query, the <strong>Compiler</strong> turns it into a plan, the <strong>Execution Engine</strong> runs that plan over Hadoop.</p></div>
+      </div>
+      <div class="flow mt reveal">
+        <div class="step">Your SQL</div><div class="arrow">→</div>
+        <div class="step">Driver</div><div class="arrow">→</div>
+        <div class="step">Compiler<br>(makes a plan)</div><div class="arrow">→</div>
+        <div class="step">Execution Engine</div><div class="arrow">→</div>
+        <div class="step">MapReduce / Tez / Spark<br>over HDFS</div>
+      </div>
+      <div class="callout mt-s reveal"><span class="tag">The twin</span>Hive is a <strong>translator</strong>: you speak SQL, it speaks big-data-job, and hands you back a normal table of results.</div>
+    </div>
+  </section>
+
+  <!-- 13 · DATA TYPES -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference · what a column can hold</div>
+      <h2 class="title reveal">Hive data types</h2>
+      <div class="grid g2 mt reveal">
+        <div>
+          <table class="t">
+            <thead><tr><th>Numbers &amp; dates</th><th class="mono">example</th></tr></thead>
+            <tbody>
+              <tr><td class="mono h">INT / BIGINT</td><td class="mono">200, 5324</td></tr>
+              <tr><td class="mono h">FLOAT / DOUBLE</td><td class="mono">4.99</td></tr>
+              <tr><td class="mono h">TIMESTAMP</td><td class="mono">2025-10-11 13:55:36</td></tr>
+              <tr><td class="mono h">DATE</td><td class="mono">2025-10-11</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <table class="t">
+            <thead><tr><th>Text &amp; complex</th><th class="mono">example</th></tr></thead>
+            <tbody>
+              <tr><td class="mono h">STRING / VARCHAR</td><td class="mono">"/product/shoes"</td></tr>
+              <tr><td class="mono h">ARRAY</td><td class="mono">["shoes","socks"]</td></tr>
+              <tr><td class="mono h">MAP</td><td class="mono">{"city":"Mumbai"}</td></tr>
+              <tr><td class="mono h">STRUCT</td><td class="mono">{name, age}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="callout mt reveal">Most work uses just <strong>STRING, INT, and DOUBLE</strong>. The complex types (ARRAY, MAP, STRUCT) are how Hive handles the <em>semi-structured</em> data from Session 1 — a column that holds a little list or record inside each row.</div>
+    </div>
+  </section>
+
+  <!-- 14 · MANAGED VS EXTERNAL -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference · two kinds of table</div>
+      <h2 class="title reveal">Managed vs. external tables — a safety point</h2>
+      <div class="grid g2 mt reveal">
+        <div class="card">
+          <h3>Managed table</h3>
+          <p>Hive <strong>owns</strong> the data. Drop the table and Hive <strong>deletes the files too.</strong></p>
+          <p class="mt-s subtle">Use for data Hive itself created.</p>
+        </div>
+        <div class="card ok">
+          <h3>External table  <span style="font-family:var(--mono);font-size:.8em;color:var(--success)">(what we use)</span></h3>
+          <p>Hive only <strong>points at</strong> files it doesn't own. Drop the table and the <strong>files stay safe.</strong></p>
+          <p class="mt-s subtle">Use for company data that already exists — like our log.</p>
+        </div>
+      </div>
+      <div class="code-faded reveal mt-s">
+        <span class="code-label">In the lab</span>
+        <pre class="code"><span class="k">CREATE EXTERNAL TABLE</span> access_logs ( ip <span class="k">STRING</span>, status <span class="k">INT</span>, … )
+<span class="k">LOCATION</span> <span class="s">'/content/logdata'</span>;   <span class="c">-- points at files; never copies them</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · PARTITIONS & BUCKETS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference · making big tables fast</div>
+      <h2 class="title reveal">Partitions &amp; buckets — Hive's speed tricks</h2>
+      <div class="grid g2 mt reveal">
+        <div class="card gold">
+          <h3>Partition — separate drawers</h3>
+          <p>Split the table by a column, e.g. by <strong>date</strong>. A query for “11 Oct” reads only that drawer — not the whole year.</p>
+          <div class="twin mt-s" style="font-size:14px">Like filing invoices in one folder per month — you open October, not the whole cabinet.</div>
+        </div>
+        <div class="card">
+          <h3>Bucket — fixed sub-bins</h3>
+          <p>Inside a partition, spread rows into a fixed number of files by a column (e.g. <strong>customer id</strong>) so lookups and joins land in the right bin fast.</p>
+          <div class="twin mt-s" style="font-size:14px">Like A–Z dividers inside the October folder.</div>
+        </div>
+      </div>
+      <div class="callout mt reveal"><span class="tag">Why a manager cares</span>Partitioning is the difference between a report that scans <strong>one day</strong> and one that scans <strong>five years</strong> — same query, a fraction of the cost and wait.</div>
+    </div>
+  </section>
+
+  <!-- 16 · FUNCTIONS + JOIN -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Reference · beyond the basics</div>
+      <h2 class="title reveal">The toolkit you'll reach for</h2>
+      <div class="grid g3 mt reveal">
+        <div class="card"><h3>Aggregate</h3><p style="font-family:var(--mono);line-height:2;font-size:13px"><span class="gold">COUNT</span> · <span class="gold">SUM</span> · <span class="gold">AVG</span><br><span class="gold">MIN</span> · <span class="gold">MAX</span></p><p>The “total” verb — one number from many rows.</p></div>
+        <div class="card"><h3>String</h3><p style="font-family:var(--mono);line-height:2;font-size:13px"><span class="gold">SUBSTR</span> · <span class="gold">UPPER</span><br><span class="gold">LOWER</span> · <span class="gold">LENGTH</span></p><p>Shape messy text — like pulling the hour out of a timestamp.</p></div>
+        <div class="card"><h3>Filter &amp; combine</h3><p style="font-family:var(--mono);line-height:2;font-size:13px"><span class="gold">WHERE</span> · <span class="gold">LIKE</span><br><span class="gold">GROUP BY</span> · <span class="gold">JOIN</span></p><p><span style="font-family:var(--mono)">JOIN</span> links two tables — logs to a product list, say.</p></div>
+      </div>
+      <div class="callout ok mt reveal"><span class="tag">Everything you saw today is these</span>Every business question on the earlier slides was built from just <strong>WHERE, GROUP BY, an aggregate, and ORDER BY</strong> — the SQL you already recognise.</div>
+    </div>
+  </section>
+
+  <!-- 17 · THE LAB -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">Hands-on · today's lab</div>
+      <h2 class="title reveal">Real Hive, in your browser — nothing to install</h2>
+      <div class="grid col-6-4 mt reveal">
+        <div>
+          <ul class="clean">
+            <li>We run in <strong>Google Colab</strong> — a free cloud machine. Mac or Windows, identical.</li>
+            <li>One notebook link installs real Hive in the cloud; <strong>your laptop stays untouched.</strong></li>
+            <li>You build an external table over the 200,000-line log and answer six questions in SQL.</li>
+            <li>Section 1 (the install) takes 3–6 minutes — start it while we talk.</li>
+          </ul>
+        </div>
+        <div class="card ok">
+          <h3>What you'll practise</h3>
+          <p>Change <strong>one line at a time</strong>, re-run. Top 10 → top 3. Group by page → by visitor. All errors → only 404s.</p>
+          <div class="callout ok mt" style="box-shadow:none;padding:12px 16px"><span class="tag">Outcome</span>Read Hive output and answer a business question from it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · BUSINESS CASE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The business case</div>
+      <h2 class="title reveal">Why companies run Hive</h2>
+      <ul class="clean reveal mt">
+        <li><strong>Reporting at scale.</strong> Analysts answer questions over years of data in the SQL they already know — no engineer needed for every request.</li>
+        <li><strong>Cheaper questions.</strong> When a query is two lines of SQL, people ask more of them — and decide on evidence, not instinct.</li>
+        <li><strong>Keep everything.</strong> Reading files as-is means a company can analyse its <strong>whole history</strong>, not just the sample it had room to load.</li>
+        <li><strong>Familiar tools plug in.</strong> Tableau, Power BI and Excel connect to Hive over ODBC — the warehouse feels like a database to the people using it.</li>
+      </ul>
+      <div class="callout gold mt reveal"><span class="tag">Manager's read</span>Hive turns “that would take an engineer a week” into “an analyst can answer that this afternoon.”</div>
+    </div>
+  </section>
+
+  <!-- 19 · TAKEAWAY -->
+  <section class="slide slide--divider">
+    <div class="slide-inner">
+      <div class="eyebrow reveal">The takeaway</div>
+      <h1 class="divider-title reveal" style="font-size:clamp(28px,4.6vw,58px)">The SQL you know.<br>Files you couldn't open.</h1>
+      <p class="divider-sub reveal">Hive answers everyday database questions over data far too big for a spreadsheet — by labelling files instead of reloading them. The six queries you'll run today would work unchanged over <span class="accent">billions</span> of rows on a real cluster. Only the scale changes.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <span>QuickKart · Big Data Analytics · Session 7 · Hive</span>
+  <span class="num"><b id="cur">01</b> / <span id="total">19</span></span>
+</div>
+<div class="nav">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+</div>
+
+<script>
+  const slides=Array.from(document.querySelectorAll('.slide'));
+  const total=slides.length; let i=0;
+  const curEl=document.getElementById('cur'), totEl=document.getElementById('total'), bar=document.getElementById('progress');
+  totEl.textContent=String(total).padStart(2,'0');
+  function show(n){ i=Math.max(0,Math.min(total-1,n)); slides.forEach((s,idx)=>s.classList.toggle('active',idx===i)); curEl.textContent=String(i+1).padStart(2,'0'); bar.style.width=((i+1)/total*100)+'%'; }
+  const next=()=>show(i+1), prev=()=>show(i-1);
+  document.getElementById('next').addEventListener('click',next);
+  document.getElementById('prev').addEventListener('click',prev);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(total-1);}
+  });
+  document.getElementById('deck').addEventListener('click',e=>{ const x=e.clientX/window.innerWidth; if(x>0.62)next(); else if(x<0.38)prev(); });
+  show(0);
+</script>
+</body>
+</html>

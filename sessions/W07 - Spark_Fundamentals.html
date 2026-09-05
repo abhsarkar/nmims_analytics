@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 1 — Spark Fundamentals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08111F;--bg2:#0F1E33;--card:#14263D;--border:#233A56;--text:#F4F8FC;--text2:#A8B8CC;--muted:#70849A;--accent:#3BA5E7;--accent2:#F0B44D;--success:#39B87F;--danger:#E35B5B;--purple:#A98BE0;--orange:#E8854A;--r:16px;--shadow:0 18px 50px -20px rgba(0,0,0,.65);--font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono","SF Mono",Menlo,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:radial-gradient(1200px 700px at 80% -10%,#1e2f52 0%,#08111F 55%,#050A12 100%);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:960px;margin:0 auto;padding:0 clamp(16px,3vw,28px) 90px}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(8,17,31,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:960px;margin:0 auto;padding:10px clamp(16px,3vw,28px);display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none}
+.topbar-in::-webkit-scrollbar{display:none}
+.brand{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-right:8px;flex-shrink:0}
+.nav-pill{background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.nav-pill:hover{border-color:var(--orange);color:var(--text)}
+.pacing{background:var(--orange);color:#08111F;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:800;flex-shrink:0;margin-left:auto}
+.hero{padding:52px 0 30px;text-align:center}
+h1{font-weight:800;font-size:clamp(28px,5vw,50px);letter-spacing:-.03em;line-height:1.06;margin-bottom:14px}
+h2{font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px}
+h3{font-weight:700;font-size:16px;margin-bottom:6px}
+p.sub{font-size:clamp(14px,1.4vw,17px);color:var(--text2);line-height:1.6;max-width:60ch;margin:0 auto 18px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.24em;font-weight:700;color:var(--orange);margin-bottom:12px}
+.time-chip{display:inline-block;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 12px;margin-bottom:14px}
+.time-chip .n{color:var(--orange)}
+strong{color:var(--text)}
+code{font-family:var(--mono);background:rgba(232,133,74,.12);color:var(--orange);padding:1px 6px;border-radius:5px;font-size:.92em}
+.ok{color:var(--success)}.gold{color:var(--accent2)}.ac{color:var(--accent)}.dg{color:var(--danger)}.pu{color:var(--purple)}.or{color:var(--orange)}
+section.topic{padding:40px 0 30px;border-bottom:1px solid rgba(35,58,86,.45);scroll-margin-top:60px}
+section.topic:last-of-type{border-bottom:none}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+.card.top-orange{border-top:3px solid var(--orange)}
+.card.top-accent{border-top:3px solid var(--accent)}
+.card.top-purple{border-top:3px solid var(--purple)}
+.card.top-success{border-top:3px solid var(--success)}
+.card.top-danger{border-top:3px solid var(--danger)}
+.card.top-gold{border-top:3px solid var(--accent2)}
+.card-label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;margin-bottom:8px}
+.card p{font-size:14px;color:var(--text2);line-height:1.55}
+
+.twin{background:linear-gradient(135deg,rgba(232,133,74,.08),rgba(20,38,61,.4));border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:var(--r);padding:16px 20px;margin-top:14px}
+.twin .tag{display:block;font-weight:700;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;margin-bottom:6px}
+.twin p{font-size:14px;color:var(--text2);line-height:1.6}
+
+.callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r);padding:14px 20px;font-size:14px;line-height:1.55;color:var(--text2);margin-top:14px}
+.callout .tag{display:block;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-size:10.5px;margin-bottom:5px}
+.callout.gold{border-left-color:var(--accent2)}.callout.gold .tag{color:var(--accent2)}
+.callout.pu{border-left-color:var(--purple)}.callout.pu .tag{color:var(--purple)}
+.callout.ok{border-left-color:var(--success)}.callout.ok .tag{color:var(--success)}
+.callout.rupee{border-left-color:var(--success);background:rgba(57,184,127,.06)}
+.callout.rupee .tag{color:var(--success)}
+.callout.dg{border-left-color:var(--danger)}.callout.dg .tag{color:var(--danger)}
+
+.uc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);transition:.25s;cursor:pointer;margin-top:14px}
+.uc:hover{border-color:var(--orange);transform:translateY(-2px)}
+.uc-head{padding:18px 20px 12px;display:flex;align-items:center;gap:14px}
+.uc-ico{font-size:28px;flex-shrink:0}
+.uc-title{font-weight:700;font-size:15px;line-height:1.3}
+.uc-sub{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.uc-body{padding:0 20px;max-height:0;overflow:hidden;transition:max-height .4s ease,padding .4s}
+.uc.open .uc-body{max-height:700px;padding:0 20px 20px}
+.uc-tap{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0 20px 14px}
+.uc.open .uc-tap{color:var(--success)}
+.uc-body p{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+
+.hon{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:12px;cursor:pointer;transition:.25s;box-shadow:var(--shadow)}
+.hon:hover{border-color:var(--orange)}
+.hon .q{font-size:14.5px;font-weight:600;line-height:1.45;margin-bottom:6px}
+.hon .tap{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.hon .a{max-height:0;overflow:hidden;transition:.35s;font-size:13.5px;color:var(--text2);line-height:1.55}
+.hon.open .a{max-height:260px;margin-top:10px}
+.hon.open .tap{color:var(--success)}
+
+.codeblock{background:#0A1524;border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:12.5px;color:#B9D6F2;overflow-x:auto;margin-top:10px;line-height:1.6}
+.kw{color:var(--purple)}.fn{color:var(--accent2)}.str{color:var(--success)}.c1{color:var(--muted)}
+
+table.t{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin:14px 0}
+table.t th{background:var(--bg2);text-align:left;padding:10px 14px;font-size:12.5px;border-bottom:2px solid var(--orange);color:var(--text)}
+table.t td{padding:10px 14px;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border);vertical-align:top}
+table.t tr:last-child td{border-bottom:none}
+table.t td.h{color:var(--text);font-weight:600}
+
+.timeline{position:relative;padding-left:26px;margin-top:16px}
+.timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-item{position:relative;padding-bottom:18px}
+.tl-item::before{content:'';position:absolute;left:-26px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--orange);border:2px solid var(--bg)}
+.tl-item .yr{font-size:11px;font-weight:800;color:var(--orange);letter-spacing:.05em}
+.tl-item p{font-size:13.5px;color:var(--text2);margin-top:2px;line-height:1.5}
+
+.dag-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px 18px;margin-top:16px;box-shadow:var(--shadow)}
+.dag-controls{display:flex;justify-content:center;margin-bottom:18px}
+.dag-btn{background:var(--orange);color:#08111F;border:none;border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.dag-btn:hover{opacity:.88}
+.stage-box{border:1px dashed var(--border);border-radius:12px;padding:14px 10px 10px;margin-bottom:8px;position:relative}
+.stage-box .stage-tag{position:absolute;top:-11px;left:14px;background:var(--bg);padding:0 8px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.dag-row{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:nowrap;overflow-x:auto}
+.dag-node{background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:9px 12px;font-size:11.5px;font-weight:600;text-align:center;min-width:76px;transition:.3s;flex-shrink:0}
+.dag-node.active{border-color:var(--orange);background:rgba(232,133,74,.15);color:var(--orange);transform:scale(1.06)}
+.dag-node.done{border-color:var(--success);background:rgba(57,184,127,.1);color:var(--success)}
+.dag-arrow{color:var(--muted);font-size:16px;flex-shrink:0}
+.shuffle-mark{text-align:center;font-size:10.5px;color:var(--danger);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:6px 0}
+.dag-status{text-align:center;font-size:13px;color:var(--text2);margin-top:14px;min-height:20px}
+
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:.2s}
+.tool-card:hover{border-color:var(--orange);transform:translateY(-2px)}
+.tool-ico{font-size:26px;margin-bottom:8px}
+.tool-card h4{font-size:13.5px;margin-bottom:5px}
+.tool-card p{font-size:12px;color:var(--text2);line-height:1.5}
+
+.pillnav{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.classlink{background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:700;text-decoration:none}
+.classlink:hover{border-color:var(--orange);color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand">BDA · CLASS 1 / 2</span>
+    <a class="nav-pill" href="#origin">Origin</a>
+    <a class="nav-pill" href="#why">Why Spark</a>
+    <a class="nav-pill" href="#arch">Architecture</a>
+    <a class="nav-pill" href="#components">Components</a>
+    <a class="nav-pill" href="#rdd">RDD</a>
+    <a class="nav-pill" href="#trans">Transform/Action</a>
+    <a class="nav-pill" href="#dag">DAG</a>
+    <a class="nav-pill" href="#test">Self-test</a>
+    <span class="pacing">~72 MIN</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="eyebrow">Big Data Analytics · Spark Basics</div>
+  <h1>The kitchen that stopped<br>running back to the pantry</h1>
+  <p class="sub">Meera wants to test five different discount thresholds before her 9 AM meeting. Each MapReduce job takes 40 minutes because every single step writes to disk and reads it back. Five tests, five hours. She doesn't have five hours. Today: why that changed, and exactly what's running under the hood when it does.</p>
+  <div class="time-chip">Today's arc → <span class="n">origin</span> → <span class="n">architecture</span> → <span class="n">RDD</span> → <span class="n">DAG</span>. Databricks and hands-on lab are Class 2.</div>
+</div>
+
+<!-- ================= ORIGIN ================= -->
+<section class="topic" id="origin">
+  <div class="eyebrow">0–8 min · Where this came from</div>
+  <h2>Spark wasn't built to add features. It was built to fix a specific pain.</h2>
+  <p class="sub" style="text-align:left;margin:0 0 4px;max-width:none">Every tool in this course so far solved one bottleneck. Spark's bottleneck was speed on repeated, iterative work — exactly the work a business analyst does when testing scenarios.</p>
+  <div class="timeline">
+    <div class="tl-item"><div class="yr">2009</div><p>Researchers at UC Berkeley's AMPLab are running machine learning experiments on Hadoop MapReduce. Training a model means running the <strong>same computation dozens of times</strong> over the same data — and MapReduce writes to disk after every single pass. The lab builds Spark specifically to keep that data in memory between iterations.</p></div>
+    <div class="tl-item"><div class="yr">2010</div><p>Spark is open-sourced. Early benchmarks show iterative jobs running <strong>10–20× faster</strong> than the equivalent MapReduce pipeline.</p></div>
+    <div class="tl-item"><div class="yr">2014</div><p>Spark becomes a top-level Apache project. The same year, it sets a world record for large-scale sorting — beating Hadoop's MapReduce on the same benchmark using <strong>far fewer machines</strong>.</p></div>
+    <div class="tl-item"><div class="yr">Today</div><p>Spark is the default engine behind almost every modern "lakehouse" platform, Databricks included — the subject of Class 2.</p></div>
+  </div>
+  <div class="callout">
+    <span class="tag">Why this history matters for you</span>
+    Spark is not "Hadoop, but newer." It's a different answer to a narrower question: <strong>Hadoop MapReduce</strong> asked "how do we process data too big for one machine?" <strong>Spark</strong> asked "how do we do that <em>and</em> run the same job on the same data again and again without paying the disk-I/O tax every time?"
+  </div>
+</section>
+
+<!-- ================= WHY SPARK ================= -->
+<section class="topic" id="why">
+  <div class="eyebrow">8–16 min · The business crisis</div>
+  <h2>Why QuickKart needed something faster</h2>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card top-danger">
+      <div class="card-label dg">The MapReduce problem</div>
+      <p>Every Map step, every Reduce step, every stage in a pipeline <strong>writes its result to disk</strong> before the next step can read it. Safe — the job survives a crash — but slow. Fine for a report that runs once, overnight. Punishing when Meera wants to try five scenarios in a row, each reusing the same base data.</p>
+    </div>
+    <div class="card top-orange">
+      <div class="card-label or">The Spark idea</div>
+      <p>Keep the data <strong>in memory (RAM)</strong> across steps instead of writing to disk each time. The first read from HDFS is the only slow part — every transformation after that happens at memory speed, often <strong>10–100× faster</strong> for iterative work.</p>
+    </div>
+  </div>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card top-accent"><div class="card-label ac">Where this bites hardest</div><p><strong>Machine learning training</strong> — the same dataset scanned dozens or hundreds of times to converge on a model.</p></div>
+    <div class="card top-accent"><div class="card-label ac">Where this bites hardest</div><p><strong>Interactive / exploratory analysis</strong> — an analyst asking "what about this filter instead?" every 30 seconds.</p></div>
+    <div class="card top-accent"><div class="card-label ac">Where this bites hardest</div><p><strong>Multi-step pipelines</strong> — clean → join → aggregate → join again, where MapReduce forces a disk round-trip at every arrow.</p></div>
+  </div>
+  <div class="twin">
+    <span class="tag">Everyday twin</span>
+    <p>MapReduce is a line cook who puts every half-finished dish back in the walk-in fridge, then takes it back out for the next step — even if the next step happens ten seconds later. Spark is the same cook keeping the pan on the stove, working through all the steps of one order before it ever needs to go back to storage.</p>
+  </div>
+  <div class="callout rupee">
+    <span class="tag">Business value</span>
+    The discount-scenario test that took <strong>5 hours across five MapReduce jobs</strong> now takes <strong>under 5 minutes</strong> on Spark, because the orders table is loaded into memory once and reused for all five what-if queries. That's the difference between Meera walking into her 9 AM meeting with numbers or with excuses.
+  </div>
+  <div class="callout dg">
+    <span class="tag">The honest caveat</span>
+    In-memory only helps if the working data <strong>fits in the cluster's combined RAM</strong> — and only if you actually ask Spark to keep it there (more on this under caching). Spark doesn't make disk-bound, one-pass jobs dramatically faster; its advantage is concentrated in iterative and interactive work.
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section class="topic" id="arch">
+  <div class="eyebrow">16–34 min · The architecture, properly</div>
+  <h2>Three roles, and what each one actually holds</h2>
+  <p class="sub" style="text-align:left;margin:0 0 4px;max-width:none">Every Spark job — however small — involves the same three players. Today we go one level deeper than "driver, manager, executor" into what each one is actually doing and holding in memory.</p>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card top-orange">
+      <div class="card-label or">Driver Program</div>
+      <p>Runs <code>your code</code>. Holds the <code>SparkSession</code> (your entry point). Contains the <strong>DAG scheduler</strong> (splits the job into stages) and the <strong>task scheduler</strong> (hands individual tasks to executors). Collects final results when you call an action like <code>.collect()</code>.</p>
+    </div>
+    <div class="card top-accent">
+      <div class="card-label ac">Cluster Manager</div>
+      <p>The resource broker — negotiates with the underlying infrastructure for machines, then hands the Driver a set of executors to work with. Doesn't touch your data at all; purely an allocator.</p>
+    </div>
+    <div class="card top-purple">
+      <div class="card-label pu">Executors</div>
+      <p>The actual workers, one process per node (usually). Each runs many <strong>tasks</strong> in parallel threads, and holds a slice of the data <strong>in its own memory</strong> — split further into <strong>storage memory</strong> (cached data) and <strong>execution memory</strong> (working space for shuffles and joins).</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:22px">Cluster manager: three ways to get machines</h3>
+  <table class="t">
+    <thead><tr><th>Cluster manager</th><th>What it is</th><th>Typical setting</th></tr></thead>
+    <tbody>
+      <tr><td class="h">Standalone</td><td>Spark's own simple built-in manager — no other software needed.</td><td>Small teams, learning, single-purpose Spark clusters.</td></tr>
+      <tr><td class="h">YARN</td><td>Hadoop's resource manager — the same YARN from earlier sessions.</td><td>Enterprises with an existing Hadoop cluster; Spark shares the same machines as Hive jobs.</td></tr>
+      <tr><td class="h">Kubernetes</td><td>Container-based scheduling — each executor runs as a pod.</td><td>Cloud-native shops; this is what Databricks runs underneath.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:22px">Executor memory, split in two</h3>
+  <div class="grid g2" style="margin-top:10px">
+    <div class="card top-success"><div class="card-label ok">Storage memory</div><p>Holds cached / persisted RDDs and DataFrames — the "keep this on the stove" memory from the caching demo.</p></div>
+    <div class="card top-danger"><div class="card-label dg">Execution memory</div><p>Working space for active computation — shuffles, joins, sorts. If a job runs out of this, performance degrades sharply (spilling to disk) before it fails.</p></div>
+  </div>
+
+  <div class="twin">
+    <span class="tag">Everyday twin</span>
+    <p>The Driver is the head chef who reads the whole order ticket and decides the sequence of steps before anyone touches a pan — and keeps a runner (the task scheduler) sending instructions to each station. The Cluster Manager is the restaurant manager who assigns which line cooks are free tonight — they don't cook, they staff. Each Executor is a line cook with two counters: one for ingredients they're keeping prepped and ready (storage memory), one for the dish actively being assembled (execution memory).</p>
+  </div>
+  <div class="callout">
+    <span class="tag">One thing worth remembering</span>
+    A Spark job doesn't run on "the cluster" as one blob — it runs as many small <strong>tasks</strong>, typically one per data partition, spread across executors, all following the plan the Driver built. More partitions than executor cores means some tasks queue and wait their turn.
+  </div>
+</section>
+
+<!-- ================= COMPONENTS ================= -->
+<section class="topic" id="components">
+  <div class="eyebrow">34–42 min · Spark components</div>
+  <h2>One engine, five tools built on it</h2>
+  <p class="sub" style="text-align:left;margin:0 0 4px;max-width:none">Spark Core does the scheduling and memory management everything above just described. Everything else is a specialised layer on top — pick the tool that matches the question, not the whole stack every time.</p>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="tool-card"><div class="tool-ico">⚙️</div><h4>Spark Core</h4><p>Task scheduling, memory management, fault recovery — the RDD engine everything else sits on.</p></div>
+    <div class="tool-card"><div class="tool-ico">🗂️</div><h4>Spark SQL</h4><p>DataFrames and SQL on structured data, optimised by the <strong>Catalyst</strong> query planner. What you'll use most this trimester — the fast cousin of Hive.</p></div>
+    <div class="tool-card"><div class="tool-ico">📡</div><h4>Structured Streaming</h4><p>Treats a live, never-ending flow of data as a table that keeps growing — processed in small "micro-batches," near real-time.</p></div>
+    <div class="tool-card"><div class="tool-ico">🤖</div><h4>MLlib</h4><p>Machine learning at scale — regression, clustering, recommendation — built as multi-step <strong>pipelines</strong> that run across the cluster.</p></div>
+    <div class="tool-card"><div class="tool-ico">🕸️</div><h4>GraphX</h4><p>Graph algorithms on data modelled as vertices and edges — relationships and networks.</p></div>
+  </div>
+  <div class="callout gold">
+    <span class="tag">Mapped to QuickKart</span>
+    Meera's discount scenarios → <strong>Spark SQL</strong>. Flagging a fraudulent order the instant it's placed → <strong>Structured Streaming</strong>. "Which customers are likely to churn next month?" → <strong>MLlib</strong>. "Which customers refer which other customers, and who are the real hubs?" → <strong>GraphX</strong>. All four sit on the same Spark Core engine — one cluster, one skill set, several jobs.
+  </div>
+</section>
+
+<!-- ================= RDD ================= -->
+<section class="topic" id="rdd">
+  <div class="eyebrow">42–52 min · Spark concepts · Part 1</div>
+  <h2>RDD — the idea everything else is built on</h2>
+  <div class="card top-purple" style="margin-top:14px">
+    <div class="card-label pu">Resilient Distributed Dataset</div>
+    <p>A collection of records, split into <strong>partitions</strong>, spread across the executors' memory. Two properties matter more than the name: it's <strong>immutable</strong> (a transformation never changes the original, it produces a new RDD) and it's <strong>resilient</strong> — if a partition is lost when a machine dies, Spark doesn't need a backup copy of the data. It just <strong>replays the recipe</strong> that built that partition.</p>
+  </div>
+
+  <h3 style="margin-top:20px">How an RDD actually gets created</h3>
+  <div class="grid g2" style="margin-top:10px">
+    <div class="card top-accent"><div class="card-label ac">From a collection already in memory</div><div class="codeblock"><span class="fn">sc</span>.parallelize([<span class="str">"a"</span>,<span class="str">"b"</span>,<span class="str">"c"</span>])</div><p style="margin-top:8px">Rare in practice — mostly used for teaching and testing.</p></div>
+    <div class="card top-accent"><div class="card-label ac">From external storage</div><div class="codeblock"><span class="fn">sc</span>.textFile(<span class="str">"/data/orders.csv"</span>)</div><p style="margin-top:8px">The real path — HDFS, DBFS, or cloud storage. This is how QuickKart's orders actually enter Spark.</p></div>
+  </div>
+
+  <h3 style="margin-top:22px">Persistence levels — where "cached" data actually lives</h3>
+  <table class="t">
+    <thead><tr><th>Level</th><th>Where it's stored</th><th>Trade-off</th></tr></thead>
+    <tbody>
+      <tr><td class="h"><code>MEMORY_ONLY</code></td><td>RAM only, as Java objects</td><td>Fastest reuse. Lost partitions are recomputed if memory runs out.</td></tr>
+      <tr><td class="h"><code>MEMORY_AND_DISK</code></td><td>RAM, spills to disk if it doesn't fit</td><td>The safe default — slower than pure memory, never forces a full recompute.</td></tr>
+      <tr><td class="h"><code>MEMORY_ONLY_SER</code></td><td>RAM, serialized (compressed) form</td><td>Fits more data per GB of RAM, costs CPU time to compress/decompress.</td></tr>
+      <tr><td class="h"><code>DISK_ONLY</code></td><td>Disk only</td><td>For data too big to ever fit in memory — still beats recomputing from source.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:var(--text2);margin-top:8px"><code>.cache()</code> from the Hello World demo is just shorthand for <code>.persist(MEMORY_ONLY)</code>.</p>
+
+  <div class="twin">
+    <span class="tag">Everyday twin</span>
+    <p>Every station's ingredients are labelled with the recipe steps that produced them, not just the ingredients themselves. If station 3's tray falls on the floor, nobody panics — you just re-read the recipe card (the <strong>lineage</strong>) and remake that one tray from the last known-good ingredients. And "persistence level" is just: do you keep the prepped tray on the counter (memory), move it to the walk-in when the counter's full (memory-and-disk), or straight into cold storage because there's no counter space at all (disk only)?</p>
+  </div>
+</section>
+
+<!-- ================= TRANSFORMATIONS / LAZY ================= -->
+<section class="topic" id="trans">
+  <div class="eyebrow">52–60 min · Spark concepts · Part 2</div>
+  <h2>Transformations vs actions — and which ones cost a shuffle</h2>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card top-accent">
+      <div class="card-label ac">Transformations</div>
+      <p><code>select</code>, <code>filter</code>, <code>groupBy</code>, <code>join</code> — these describe a step but don't execute it. Spark just adds the step to the plan. This is <strong>lazy evaluation</strong>.</p>
+    </div>
+    <div class="card top-success">
+      <div class="card-label ok">Actions</div>
+      <p><code>show()</code>, <code>count()</code>, <code>collect()</code> — these trigger execution. Spark now looks at the <strong>whole plan</strong> built so far and runs it.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:20px">Not all transformations cost the same</h3>
+  <div class="grid g2" style="margin-top:10px">
+    <div class="card top-success">
+      <div class="card-label ok">Narrow transformations</div>
+      <p>Each output partition depends on exactly <strong>one</strong> input partition. No data has to move between executors. Examples: <code>map</code>, <code>filter</code>, <code>union</code>. Cheap — stays inside the same stage.</p>
+    </div>
+    <div class="card top-danger">
+      <div class="card-label dg">Wide transformations</div>
+      <p>Each output partition may depend on <strong>many</strong> input partitions, scattered across executors. Data has to be redistributed over the network — a <strong>shuffle</strong>. Examples: <code>groupBy</code>, <code>join</code>, <code>distinct</code>, <code>repartition</code>. Expensive — and this is exactly what creates a new stage, coming up next.</p>
+    </div>
+  </div>
+  <div class="twin">
+    <span class="tag">Everyday twin</span>
+    <p>Writing "chop onions, then sauté, then add tomatoes" on the order ticket is a transformation — nobody's cooking yet. Calling out "fire it!" is the action. Chopping and sautéing at your own station is narrow — you never need another station's tray. But "combine every station's tomato prep into one bowl before plating" is wide — someone has to physically walk trays between stations first. That walk is the shuffle, and it's the single most expensive thing that happens in a Spark job.</p>
+  </div>
+  <div class="callout dg">
+    <span class="tag">Why this is worth memorising</span>
+    Almost every real Spark performance problem traces back to <strong>too many unnecessary wide transformations</strong> — repeated shuffles that could have been combined into one. Reading the DAG (next) is how you actually see this happening instead of guessing.
+  </div>
+</section>
+
+<!-- ================= DAG ================= -->
+<section class="topic" id="dag">
+  <div class="eyebrow">60–70 min · Spark concepts · Part 3</div>
+  <h2>DAG — job, stages, tasks</h2>
+  <p class="sub" style="text-align:left;margin:0 0 4px;max-width:none">Directed Acyclic Graph — every transformation you chain together becomes a node; data always flows one way, and the plan never loops back on itself. Now that you know narrow vs wide, here's the rule that turns a DAG into stages: <strong>a new stage begins every time there's a shuffle.</strong></p>
+
+  <div class="dag-wrap">
+    <div class="dag-controls"><button class="dag-btn" onclick="runDag()">▶ Fire the order (run the DAG)</button></div>
+    <div style="text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Job: revenue by category, festival week only</div>
+
+    <div class="stage-box">
+      <span class="stage-tag">Stage 1 · narrow, pipelined</span>
+      <div class="dag-row" id="dagRow1">
+        <div class="dag-node" data-i="0">Read orders<br><span style="opacity:.6;font-weight:400">(HDFS)</span></div>
+        <div class="dag-arrow">→</div>
+        <div class="dag-node" data-i="1">Filter<br><span style="opacity:.6;font-weight:400">festival week</span></div>
+      </div>
+    </div>
+    <div class="shuffle-mark">⇅ shuffle — data redistributed across executors ⇅</div>
+    <div class="stage-box">
+      <span class="stage-tag">Stage 2 · after the shuffle</span>
+      <div class="dag-row" id="dagRow2">
+        <div class="dag-node" data-i="2">GroupBy<br><span style="opacity:.6;font-weight:400">category</span></div>
+        <div class="dag-arrow">→</div>
+        <div class="dag-node" data-i="3">Sum<br><span style="opacity:.6;font-weight:400">revenue</span></div>
+        <div class="dag-arrow">→</div>
+        <div class="dag-node" data-i="4">Sort<br><span style="opacity:.6;font-weight:400">desc</span></div>
+      </div>
+    </div>
+    <div class="dag-status" id="dagStatus">Nothing has run yet — this is just the plan. Tap the button to call <code>.show()</code>.</div>
+  </div>
+
+  <h3 style="margin-top:20px">The hierarchy, top to bottom</h3>
+  <table class="t">
+    <thead><tr><th>Level</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td class="h">Job</td><td>Triggered by one action — everything above, from "fire the order" down.</td></tr>
+      <tr><td class="h">Stage</td><td>A chunk of the job with no internal shuffle. A new stage starts every time a wide transformation forces one.</td></tr>
+      <tr><td class="h">Task</td><td>The smallest unit of work — one stage, run on one partition. If you have 200 partitions, stage 1 launches 200 tasks, spread across however many executor cores are free.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="twin">
+    <span class="tag">Everyday twin</span>
+    <p>The ticket says: bring ingredients from the pantry, wash them, chop — that's Stage 1, and every station does it independently, in parallel, with zero coordination. Then: combine every station's chopped tomatoes into one bowl before the sauce step — that requires physically walking trays between stations, which only starts once every station has finished Stage 1. That handoff point is the shuffle, and it's exactly where Stage 2 begins.</p>
+  </div>
+  <div class="callout gold">
+    <span class="tag">Business value</span>
+    Because Spark sees the <strong>entire</strong> DAG before running anything, it can push the "festival week" filter down to happen <strong>before</strong> the shuffle — reading and moving less data in the first place. That optimisation is invisible to Meera; all she sees is her answer arriving in seconds instead of minutes.
+  </div>
+  <div class="callout">
+    <span class="tag">Where you'll actually see this</span>
+    Every Spark cluster (including Databricks) ships a <strong>Spark UI</strong> with a visual DAG for every job you run — the exact stage/task breakdown above, with real timings. First thing we'll open in Class 2.
+  </div>
+</section>
+
+<!-- ================= SELF TEST ================= -->
+<section class="topic" id="test">
+  <div class="eyebrow">70–72 min · Quick self-test</div>
+  <h2>Tap each term — do you have it?</h2>
+
+  <div class="hon" onclick="this.classList.toggle('open')">
+    <div class="q">Which is narrow and which is wide: <code>df.filter(...)</code> and <code>df.groupBy(...)</code>?</div>
+    <div class="tap">Tap to reveal</div>
+    <div class="a"><code>filter</code> is <strong>narrow</strong> — each output partition only needs data already sitting in its matching input partition. <code>groupBy</code> is <strong>wide</strong> — rows with the same key can be scattered across every partition, so they all have to be shuffled together first.</div>
+  </div>
+
+  <div class="hon" onclick="this.classList.toggle('open')">
+    <div class="q">A transformation like <code>.filter()</code> is called. Has any data actually been filtered yet?</div>
+    <div class="tap">Tap to reveal</div>
+    <div class="a"><strong>No.</strong> Transformations are lazy — Spark only adds the step to the plan (the DAG). Nothing executes until an action like <code>.show()</code>, <code>.count()</code>, or <code>.collect()</code> is called.</div>
+  </div>
+
+  <div class="hon" onclick="this.classList.toggle('open')">
+    <div class="q">A worker machine crashes mid-job. Does Spark need a backup copy of the lost partition to recover?</div>
+    <div class="tap">Tap to reveal</div>
+    <div class="a"><strong>No.</strong> That's the "Resilient" in RDD — Spark keeps the lineage (the recipe of transformations) for every partition, and simply recomputes the lost one from its lineage.</div>
+  </div>
+
+  <div class="hon" onclick="this.classList.toggle('open')">
+    <div class="q">A job's DAG has two shuffles in it. How many stages does it have?</div>
+    <div class="tap">Tap to reveal</div>
+    <div class="a"><strong>Three.</strong> A new stage begins after every shuffle — so two shuffles split the job into three stages: everything before shuffle 1, everything between the two shuffles, everything after shuffle 2.</div>
+  </div>
+
+  <div class="hon" onclick="this.classList.toggle('open')">
+    <div class="q">Which Spark component would you reach for to flag a fraudulent order the second it's placed, not in tomorrow's batch report?</div>
+    <div class="tap">Tap to reveal</div>
+    <div class="a"><strong>Structured Streaming.</strong> Spark SQL and DataFrames are for batch analysis of data already at rest; Streaming treats the live order feed as a continuously growing table.</div>
+  </div>
+</section>
+
+<!-- ================= CLOSING / BRIDGE ================= -->
+<section class="topic" style="text-align:center;padding:44px 0 20px">
+  <div class="eyebrow">End of Class 1</div>
+  <h2>You now know what's running under the hood</h2>
+  <p class="sub">Driver, cluster manager, executors. RDDs and lineage. Narrow vs wide, and why a shuffle is expensive. Job → stage → task. Class 2 puts all of it inside Databricks and into your own hands, on a real notebook.</p>
+  <div class="pillnav" style="max-width:420px;margin:20px auto 0">
+    <span></span>
+  </div>
+</section>
+
+</div>
+
+<script>
+function runDag(){
+  const nodes = [...document.querySelectorAll('#dagRow1 .dag-node'), ...document.querySelectorAll('#dagRow2 .dag-node')];
+  const status = document.getElementById('dagStatus');
+  nodes.forEach(n=>n.classList.remove('active','done'));
+  status.innerHTML = 'Action called — <code>.show()</code> triggers the plan. Executing the DAG now…';
+  let i = 0;
+  const labels = ['Reading orders from HDFS… (Stage 1)','Filtering to festival week… (Stage 1)','Shuffle — grouping by category… (Stage 2 begins)','Summing revenue… (Stage 2)','Sorting, descending… (Stage 2)'];
+  function step(){
+    if(i>0) nodes[i-1].classList.add('done');
+    if(i>=nodes.length){
+      status.innerHTML = '<strong style="color:var(--success)">Done.</strong> Two stages, one shuffle, zero intermediate writes to disk.';
+      return;
+    }
+    nodes[i].classList.add('active');
+    status.textContent = labels[i];
+    i++;
+    setTimeout(()=>{ nodes[i-1].classList.remove('active'); step(); }, 700);
+  }
+  step();
+}
+</script>
+</body>
+</html>

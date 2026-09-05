@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MapReduce, One Receipt at a Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EEF2F6;
+    --paper-panel: #E4EAF1;
+    --paper-card: #FCFDFE;
+    --ink: #142238;
+    --ink-soft: #55637C;
+    --ink-faint: #8792A6;
+    --line: #C7D2DE;
+    --stamp-red: #C1392B;
+    --stamp-red-soft: #F3DAD6;
+    --teal: #1C7A6E;
+    --teal-soft: #D8ECE8;
+    --gold: #9C7423;
+    --gold-soft: #EFE3C8;
+    --shadow: 0 1px 2px rgba(20,34,56,.06), 0 8px 24px rgba(20,34,56,.06);
+    font-size: 16px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(20,34,56,.05) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 28px 90px; }
+
+  /* ---------- Header ---------- */
+  header{ padding: 56px 0 34px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    display:flex; align-items:center; gap:10px;
+    margin-bottom: 18px;
+  }
+  .eyebrow::before{
+    content:"";
+    width: 22px; height: 1px; background: var(--teal);
+    display:inline-block;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(34px, 5vw, 54px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin: 0 0 18px;
+    max-width: 15ch;
+  }
+  h1 em{
+    font-style: normal;
+    color: var(--stamp-red);
+    position: relative;
+  }
+  .sub{
+    font-size: 17px;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0 0 30px;
+  }
+  .question-card{
+    display:flex; gap:16px; align-items:flex-start;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    max-width: 620px;
+    box-shadow: var(--shadow);
+  }
+  .question-card .q-mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size: 22px;
+    color:#fff; background: var(--ink);
+    width: 34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .question-card p{ margin:0; font-size:15px; color: var(--ink); }
+  .question-card p b{ color: var(--stamp-red); }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex; flex-wrap:wrap; gap:10px;
+    margin: 40px 0 8px;
+    align-items:center;
+  }
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing:.03em;
+    border-radius: 8px;
+    padding: 11px 18px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper-card);
+    color: var(--ink);
+    cursor:pointer;
+    transition: transform .12s ease, background .12s ease, color .12s ease, box-shadow .12s ease;
+    display:flex; align-items:center; gap:8px;
+  }
+  button:hover:not(:disabled){ transform: translateY(-1px); box-shadow: var(--shadow); }
+  button:active:not(:disabled){ transform: translateY(0); }
+  button:disabled{ opacity:.35; cursor: not-allowed; }
+  button.primary{ background: var(--ink); color:#fff; }
+  button.primary:hover:not(:disabled){ background:#1c2f4d; }
+  button .kbd{
+    font-size:11px; opacity:.6; border:1px solid currentColor; border-radius:4px; padding:0 5px;
+  }
+  .spacer{ flex: 1; }
+  .status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; color: var(--ink-faint);
+  }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-top: 26px;
+  }
+  @media (max-width: 980px){ .pipeline{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px){ .pipeline{ grid-template-columns: 1fr; } }
+
+  .stage{
+    background: var(--paper-panel);
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    padding: 18px 16px 20px;
+    min-height: 420px;
+    display:flex; flex-direction:column;
+    position:relative;
+    opacity: .45;
+    transition: opacity .35s ease;
+  }
+  .stage.active{ opacity: 1; }
+  .stage-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom: 4px;
+  }
+  .stage-title{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;
+  }
+  .stage-num{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color: var(--ink-faint);
+  }
+  .stage-desc{
+    font-size: 12.5px; color: var(--ink-soft); margin: 2px 0 14px; line-height:1.4;
+  }
+  .stage-body{
+    flex:1; display:flex; flex-direction:column; gap:8px; overflow:visible;
+  }
+  .stage[data-stage="input"] .stage-title{ color: var(--ink); }
+  .stage[data-stage="map"] .stage-title{ color: var(--stamp-red); }
+  .stage[data-stage="shuffle"] .stage-title{ color: var(--teal); }
+  .stage[data-stage="reduce"] .stage-title{ color: var(--gold); }
+
+  /* ---------- Receipt chips ---------- */
+  .receipt{
+    background: var(--paper-card);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    opacity:0; transform: translateY(6px);
+    animation: rise .32s ease forwards;
+  }
+  .receipt .txn{ color: var(--ink-faint); }
+  .receipt .amt{ font-weight:600; }
+  @keyframes rise{ to{ opacity:1; transform:none; } }
+
+  .map-chip{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background: var(--paper-card);
+    border:1px solid var(--line); border-radius:8px;
+    padding: 7px 10px;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    opacity:0; transform: translateY(6px);
+    animation: rise .3s ease forwards;
+  }
+  .map-chip .stamp{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:10.5px;
+    letter-spacing:.03em;
+    color:#fff; background: var(--stamp-red);
+    padding:2px 7px; border-radius:20px;
+    transform: rotate(-3deg);
+  }
+
+  .lane{
+    border:1px solid var(--line); border-radius:10px;
+    padding:10px; background: rgba(255,255,255,.5);
+    opacity:0; animation: rise .32s ease forwards;
+  }
+  .lane-head{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12.5px;
+    color: var(--teal); margin-bottom:6px;
+  }
+  .lane-head .count{
+    font-family:'IBM Plex Mono',monospace; font-weight:400; font-size:10.5px; color: var(--ink-faint);
+  }
+  .lane-items{ display:flex; flex-direction:column; gap:4px; }
+  .lane-item{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color: var(--ink-soft);
+    display:flex; justify-content:space-between;
+  }
+
+  .summary-card{
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--paper-card);
+    padding: 14px 14px 12px;
+    opacity:0; transform: translateY(8px) scale(.98);
+    animation: pop .38s cubic-bezier(.2,.9,.3,1.2) forwards;
+    position:relative;
+  }
+  @keyframes pop{ to{ opacity:1; transform:none; } }
+  .summary-city{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; margin-bottom:8px; }
+  .summary-row{
+    display:flex; justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color: var(--ink-soft);
+    padding: 2px 0;
+  }
+  .summary-row b{ color: var(--ink); font-weight:600; }
+  .stamp-seal{
+    position:absolute; top:10px; right:10px;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:10px;
+    letter-spacing:.05em;
+    color: var(--teal); border: 2px solid var(--teal);
+    border-radius: 6px; padding: 3px 7px;
+    transform: rotate(6deg);
+    opacity:0;
+  }
+  .stamp-seal.show{ animation: stampin .3s ease .15s forwards; }
+  @keyframes stampin{ from{ opacity:0; transform: rotate(6deg) scale(1.6);} to{ opacity:1; transform: rotate(6deg) scale(1);} }
+
+  .empty-hint{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color: var(--ink-faint);
+    border: 1px dashed var(--line); border-radius:8px;
+    padding: 14px; text-align:center; margin-top:auto; margin-bottom:auto;
+  }
+
+  /* ---------- Verification ---------- */
+  .verify{
+    margin-top: 48px;
+  }
+  .verify-head{
+    display:flex; align-items:baseline; gap:12px; margin-bottom: 6px; flex-wrap:wrap;
+  }
+  .verify h2{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size: 22px; margin:0;
+  }
+  .verify .note{ font-size:13.5px; color: var(--ink-soft); max-width: 62ch; margin: 6px 0 20px; }
+  .verify-grid{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:14px;
+  }
+  @media (max-width: 900px){ .verify-grid{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px){ .verify-grid{ grid-template-columns: 1fr; } }
+  .verify-card{
+    background: var(--paper-card); border:1px solid var(--line); border-radius:12px;
+    padding: 16px; box-shadow: var(--shadow);
+  }
+  .verify-city{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px; }
+  .verify-line{
+    display:flex; justify-content:space-between; font-size:12.5px; color: var(--ink-soft);
+    padding: 3px 0; font-family:'IBM Plex Mono',monospace;
+  }
+  .verify-line b{ color: var(--ink); }
+  .verify-status{
+    margin-top:10px; text-align:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px; letter-spacing:.05em;
+    border-radius:8px; padding:6px; background: var(--teal-soft); color: var(--teal);
+  }
+
+  .caveat{
+    margin-top: 26px;
+    background: var(--gold-soft);
+    border: 1px solid #E1CE9C;
+    border-radius: 10px;
+    padding: 16px 18px;
+    display:flex; gap:12px; align-items:flex-start;
+  }
+  .caveat .icon{ font-size:18px; line-height:1; }
+  .caveat p{ margin:0; font-size:13.5px; color:#5c4712; line-height:1.55; }
+  .caveat b{ color:#42350d; }
+
+  /* ---------- Legend strip ---------- */
+  .legend{
+    display:flex; flex-wrap:wrap; gap: 22px;
+    margin-top: 54px; padding-top: 22px; border-top: 1px solid var(--line);
+  }
+  .legend-item{ display:flex; gap:10px; align-items:flex-start; max-width: 240px; }
+  .legend-dot{ width:9px; height:9px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+  .legend-item h3{ font-family:'Space Grotesk',sans-serif; font-size:13px; margin:0 0 3px; }
+  .legend-item p{ font-size:12px; color: var(--ink-soft); margin:0; line-height:1.4; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Business Analytics · Big Data</div>
+    <h1>MapReduce, one <em>receipt</em> at a time.</h1>
+    <p class="sub">24 real-looking sales transactions across four cities. Watch them get labeled, grouped, and added up — the same three steps a thousand-machine cluster runs, just slow enough to see.</p>
+    <div class="question-card">
+      <div class="q-mark">?</div>
+      <p>Which city sold the most last week — and can we <b>prove</b> the total is right, not just trust it?</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button id="btn-map" class="primary">① Run Map <span class="kbd">city → amount</span></button>
+    <button id="btn-shuffle" disabled>② Run Shuffle <span class="kbd">group by city</span></button>
+    <button id="btn-reduce" disabled>③ Run Reduce <span class="kbd">sum each group</span></button>
+    <span class="spacer"></span>
+    <span class="status" id="status">Step 0 of 3 — 24 raw transactions loaded</span>
+    <button id="btn-reset">↺ Reset</button>
+  </div>
+
+  <div class="pipeline">
+    <div class="stage active" data-stage="input">
+      <div class="stage-head"><span class="stage-title">Input</span><span class="stage-num">00</span></div>
+      <div class="stage-desc">Individual sales bills, unsorted, as they came in.</div>
+      <div class="stage-body" id="col-input"></div>
+    </div>
+
+    <div class="stage" data-stage="map">
+      <div class="stage-head"><span class="stage-title">Map</span><span class="stage-num">01</span></div>
+      <div class="stage-desc">Every bill gets stamped with one key: its city.</div>
+      <div class="stage-body" id="col-map"><div class="empty-hint">Run Map to stamp each receipt →</div></div>
+    </div>
+
+    <div class="stage" data-stage="shuffle">
+      <div class="stage-head"><span class="stage-title">Shuffle</span><span class="stage-num">02</span></div>
+      <div class="stage-desc">All receipts with the same city move into one lane.</div>
+      <div class="stage-body" id="col-shuffle"><div class="empty-hint">Run Shuffle to group by city →</div></div>
+    </div>
+
+    <div class="stage" data-stage="reduce">
+      <div class="stage-head"><span class="stage-title">Reduce</span><span class="stage-num">03</span></div>
+      <div class="stage-desc">Each lane collapses into one final city total.</div>
+      <div class="stage-body" id="col-reduce"><div class="empty-hint">Run Reduce for the final answer →</div></div>
+    </div>
+  </div>
+
+  <section class="verify">
+    <div class="verify-head">
+      <h2>Independent verification</h2>
+    </div>
+    <p class="note">Every Reduce total below is checked against a second calculation, done a completely different way (a straight filter-and-sum over the raw 24 rows, no Map/Shuffle involved). If they match, the pipeline computed correctly — it says nothing about whether the original 24 receipts were entered correctly.</p>
+    <div class="verify-grid" id="verify-grid"></div>
+
+    <div class="caveat">
+      <div class="icon">⚠️</div>
+      <p><b>What this check does NOT prove:</b> if a receipt had the wrong city, a typo'd amount, or a duplicate entry, both calculations would agree on the same wrong number. This stamp verifies the <b>engine</b>, not the <b>ledger</b>.</p>
+    </div>
+  </section>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--ink)"></div>
+      <div><h3>Input</h3><p>Raw, unaggregated records — one row per real-world event.</p></div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--stamp-red)"></div>
+      <div><h3>Map</h3><p>Relabel each record by the key you care about. No math yet.</p></div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--teal)"></div>
+      <div><h3>Shuffle</h3><p>Physically regroup so same-key records sit together.</p></div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--gold)"></div>
+      <div><h3>Reduce</h3><p>Aggregate each group into one final business number.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const DATA = [
+  {id:"TXN001",city:"Mumbai",cat:"Electronics",amt:5000},
+  {id:"TXN002",city:"Delhi",cat:"Clothing",amt:3600},
+  {id:"TXN003",city:"Mumbai",cat:"Grocery",amt:1500},
+  {id:"TXN004",city:"Bengaluru",cat:"Home",amt:3600},
+  {id:"TXN005",city:"Delhi",cat:"Electronics",amt:4000},
+  {id:"TXN006",city:"Chennai",cat:"Clothing",amt:3200},
+  {id:"TXN007",city:"Mumbai",cat:"Home",amt:2200},
+  {id:"TXN008",city:"Bengaluru",cat:"Grocery",amt:1500},
+  {id:"TXN009",city:"Chennai",cat:"Electronics",amt:6000},
+  {id:"TXN010",city:"Delhi",cat:"Grocery",amt:1600},
+  {id:"TXN011",city:"Mumbai",cat:"Clothing",amt:3000},
+  {id:"TXN012",city:"Bengaluru",cat:"Electronics",amt:5500},
+  {id:"TXN013",city:"Chennai",cat:"Home",amt:3600},
+  {id:"TXN014",city:"Delhi",cat:"Home",amt:4000},
+  {id:"TXN015",city:"Mumbai",cat:"Electronics",amt:6500},
+  {id:"TXN016",city:"Bengaluru",cat:"Clothing",amt:4500},
+  {id:"TXN017",city:"Chennai",cat:"Grocery",amt:1800},
+  {id:"TXN018",city:"Delhi",cat:"Clothing",amt:3400},
+  {id:"TXN019",city:"Mumbai",cat:"Grocery",amt:1540},
+  {id:"TXN020",city:"Bengaluru",cat:"Home",amt:3200},
+  {id:"TXN021",city:"Chennai",cat:"Electronics",amt:7200},
+  {id:"TXN022",city:"Delhi",cat:"Electronics",amt:5600},
+  {id:"TXN023",city:"Mumbai",cat:"Clothing",amt:3300},
+  {id:"TXN024",city:"Bengaluru",cat:"Grocery",amt:1440},
+];
+
+const fmt = n => "₹" + n.toLocaleString("en-IN");
+const colInput = document.getElementById("col-input");
+const colMap = document.getElementById("col-map");
+const colShuffle = document.getElementById("col-shuffle");
+const colReduce = document.getElementById("col-reduce");
+const statusEl = document.getElementById("status");
+const verifyGrid = document.getElementById("verify-grid");
+
+const btnMap = document.getElementById("btn-map");
+const btnShuffle = document.getElementById("btn-shuffle");
+const btnReduce = document.getElementById("btn-reduce");
+const btnReset = document.getElementById("btn-reset");
+
+const stageEls = {
+  input: document.querySelector('[data-stage="input"]'),
+  map: document.querySelector('[data-stage="map"]'),
+  shuffle: document.querySelector('[data-stage="shuffle"]'),
+  reduce: document.querySelector('[data-stage="reduce"]'),
+};
+
+function renderInput(){
+  colInput.innerHTML = "";
+  DATA.forEach((t, i) => {
+    const el = document.createElement("div");
+    el.className = "receipt";
+    el.style.animationDelay = (i * 18) + "ms";
+    el.innerHTML = `<span class="txn">${t.id}</span><span>${t.city}</span><span class="amt">${fmt(t.amt)}</span>`;
+    colInput.appendChild(el);
+  });
+}
+
+function runMap(){
+  colMap.innerHTML = "";
+  stageEls.map.classList.add("active");
+  DATA.forEach((t, i) => {
+    const el = document.createElement("div");
+    el.className = "map-chip";
+    el.style.animationDelay = (i * 22) + "ms";
+    el.innerHTML = `<span class="stamp">${t.city}</span><span>${fmt(t.amt)}</span>`;
+    colMap.appendChild(el);
+  });
+  btnMap.disabled = true;
+  btnShuffle.disabled = false;
+  statusEl.textContent = "Step 1 of 3 — each receipt labeled City → Amount";
+}
+
+function runShuffle(){
+  colShuffle.innerHTML = "";
+  stageEls.shuffle.classList.add("active");
+  const cities = [...new Set(DATA.map(t => t.city))].sort();
+  cities.forEach((city, ci) => {
+    const items = DATA.filter(t => t.city === city);
+    const lane = document.createElement("div");
+    lane.className = "lane";
+    lane.style.animationDelay = (ci * 90) + "ms";
+    lane.innerHTML = `
+      <div class="lane-head"><span>${city}</span><span class="count">${items.length} receipts</span></div>
+      <div class="lane-items">
+        ${items.map(t => `<div class="lane-item"><span>${t.id}</span><span>${fmt(t.amt)}</span></div>`).join("")}
+      </div>`;
+    colShuffle.appendChild(lane);
+  });
+  btnShuffle.disabled = true;
+  btnReduce.disabled = false;
+  statusEl.textContent = "Step 2 of 3 — same-city receipts grouped into lanes";
+}
+
+function runReduce(){
+  colReduce.innerHTML = "";
+  stageEls.reduce.classList.add("active");
+  const cities = [...new Set(DATA.map(t => t.city))].sort();
+  cities.forEach((city, ci) => {
+    const items = DATA.filter(t => t.city === city);
+    const total = items.reduce((s, t) => s + t.amt, 0);
+    const units = items.length;
+    const avg = total / units;
+    const card = document.createElement("div");
+    card.className = "summary-card";
+    card.style.animationDelay = (ci * 110) + "ms";
+    card.innerHTML = `
+      <div class="summary-city">${city}</div>
+      <div class="summary-row"><span>Orders</span><b>${units}</b></div>
+      <div class="summary-row"><span>Total sales</span><b>${fmt(total)}</b></div>
+      <div class="summary-row"><span>Avg order</span><b>${fmt(Math.round(avg))}</b></div>
+      <div class="stamp-seal">✓ REDUCED</div>
+    `;
+    colReduce.appendChild(card);
+    setTimeout(() => card.querySelector(".stamp-seal").classList.add("show"), ci * 110 + 250);
+  });
+  btnReduce.disabled = true;
+  statusEl.textContent = "Step 3 of 3 — one final total per city";
+  renderVerification();
+}
+
+function renderVerification(){
+  verifyGrid.innerHTML = "";
+  const cities = [...new Set(DATA.map(t => t.city))].sort();
+  cities.forEach(city => {
+    // Reduce-path total
+    const reduceTotal = DATA.filter(t => t.city === city).reduce((s,t) => s + t.amt, 0);
+    // Independent path: direct filter-and-sum, computed separately on purpose
+    const independentTotal = DATA
+      .filter(t => t.city === city)
+      .map(t => t.amt)
+      .reduce((a,b) => a + b, 0);
+    const match = reduceTotal === independentTotal;
+
+    const card = document.createElement("div");
+    card.className = "verify-card";
+    card.innerHTML = `
+      <div class="verify-city">${city}</div>
+      <div class="verify-line"><span>MapReduce total</span><b>${fmt(reduceTotal)}</b></div>
+      <div class="verify-line"><span>Independent check</span><b>${fmt(independentTotal)}</b></div>
+      <div class="verify-status">${match ? "✓ MATCH — CORRECT" : "✕ MISMATCH"}</div>
+    `;
+    verifyGrid.appendChild(card);
+  });
+}
+
+function resetAll(){
+  colMap.innerHTML = '<div class="empty-hint">Run Map to stamp each receipt →</div>';
+  colShuffle.innerHTML = '<div class="empty-hint">Run Shuffle to group by city →</div>';
+  colReduce.innerHTML = '<div class="empty-hint">Run Reduce for the final answer →</div>';
+  verifyGrid.innerHTML = "";
+  stageEls.map.classList.remove("active");
+  stageEls.shuffle.classList.remove("active");
+  stageEls.reduce.classList.remove("active");
+  btnMap.disabled = false;
+  btnShuffle.disabled = true;
+  btnReduce.disabled = true;
+  statusEl.textContent = "Step 0 of 3 — 24 raw transactions loaded";
+  renderInput();
+}
+
+btnMap.addEventListener("click", runMap);
+btnShuffle.addEventListener("click", runShuffle);
+btnReduce.addEventListener("click", runReduce);
+btnReset.addEventListener("click", resetAll);
+
+renderInput();
+</script>
+</body>
+</html>
